@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fortpy mode="docstring">
+  <decorates name="itertools.cproduct">
+    <group name="test_cproduct" purpose="testing" >
+      <test identifier="2d" description="2d cartesian product of 1D arrays"
+	    timed="true" cases="01" >
+	<output identifier="prod.out" folder="./tests" file="prod.out.{}" 
+		template="integer.xml" />
+	<target name="presult" compareto="prod.out" varfile="presult.out" when="each" />
+      </test>
+      <global name="vara" type="integer" modifiers="pointer"
+	      dimensions=":" />
+      <global name="varb" type="integer" modifiers="pointer"
+	      dimensions=":" />
+      <global name="varc" type="integer" modifiers="pointer"
+	      dimensions=":" />
+      <assignment name="vara" value="seq_a"> 
+	<value identifier="seq_a" folder="./tests"
+	       file="prod.seq.a.{}" rename="prod.seq.a" />
+      </assignment>
+      <assignment name="varb" value="seq_b"> 
+	<value identifier="seq_b" folder="./tests"
+	       file="prod.seq.b.{}" rename="prod.seq.b" />
+      </assignment>
+      <assignment name="varc" value="seq_c"> 
+	<value identifier="seq_c" folder="./tests"
+	       file="prod.seq.c.{}" rename="prod.seq.c" />
+      </assignment>
+      <assignment name="presult" value="presult_const">
+	<value identifier="presult_const" constant="0" 
+	       allocate="24, 3" />
+      </assignment>
+      <assignment name="elements" part="1" value="element_init">
+	<value identifier="element_init" embedded="init"
+	       paramlist="varc" allocate="3" />
+      </assignment>
+      <assignment name="elements" part="2" value="element_init">
+	<value identifier="element_init" embedded="init" paramlist="varb" />
+      </assignment>
+      <assignment name="elements" part="3" value="element_init">
+	<value identifier="element_init" embedded="init" paramlist="vara" />
+      </assignment>
+    </group>
+  </decorates>
+</fortpy>
