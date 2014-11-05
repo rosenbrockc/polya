@@ -1,7 +1,7 @@
 module itertools
   implicit none
   private
-  public vararray, cproduct
+  public vararray, vararray2d, cproduct
 
   !!<summary>Provides a structure for variable length arrays that need to have their
   !!cartesian product taken.</summary>
@@ -18,14 +18,67 @@ module itertools
   contains
     procedure, public :: init => vararray_init
   end type vararray
+
+  !!<summary>Provides a structure for variable length 2-d arrays that need to have their
+  !!cartesian product taken.</summary>
+  !!<usage>
+  !!type(vararray) single
+  !!allocate(single)
+  !!single%init(array)
+  !!</usage>
+  type vararray2d
+     !!<member name="items">The array of items to take cartesian product over.</member>
+     !!<member name="length">The number of items in @CREF[this.items].</member>
+     integer, pointer :: items(:,:)
+     integer :: length
+  contains
+    procedure, public :: init => vararray2d_init
+    procedure, public :: finalize => vararray2d_finalize
+  end type vararray2d
 contains
   !!<summary>Initializes the array items and length property.</summary>
-  subroutine vararray_init(self, array)
+  subroutine vararray_init(self, array, length, alloc)
     class(vararray) :: self
-    integer, target, intent(in) :: array(:)
+    integer, target, optional, intent(in) :: array(:)
+    integer, optional, intent(in) :: length
+    logical, optional, intent(in) :: alloc
+
+    logical :: nalloc
+    !We need to see if we are *copying* the array, or just referencing it.
+    if (present(alloc)) then
+       nalloc = alloc
+    else
+       nalloc = .false.
+    end if
+
+    if (present(array)) then
+       if (nalloc) then
+          allocate(self%items(size(array, 1)))
+          self%items = array
+       else
+          self%items => array
+       end if
+       self%length = size(self%items, 1)
+    else
+       allocate(self%items(length))
+       self%length = length
+    end if
+  end subroutine vararray_init
+
+  !!<summary>Initializes the array items and length property.</summary>
+  subroutine vararray2d_init(self, array)
+    class(vararray2d) :: self
+    integer, target, intent(in) :: array(:,:)
     self%items => array
     self%length = size(self%items, 1)
-  end subroutine vararray_init
+  end subroutine vararray2d_init
+
+  !!<summary>Resets the vararray2d to be empty so that an existing instance can be re-used.</summary>
+  subroutine vararray2d_finalize(self)
+    class(vararray2d) :: self
+    self%items => null()
+    self%length = 0
+  end subroutine vararray2d_finalize
 
   !!<summary>Builds the cartesian product of the specified arrays.</summary>
   !!<parameter name="elements" regular="true">A 1-D ragged-array of vararray instances to take the 
@@ -37,11 +90,18 @@ contains
     class(vararray), allocatable, intent(in) :: elements(:)
     integer, allocatable, intent(inout) :: presult(:,:)
 
-    integer :: i, width = 1
+    integer :: i, prod 
+
+    prod = 1
     do i=1, size(elements,1)
-       width = width*elements(i)%length 
+       prod = prod*elements(i)%length 
     end do
-    call rproduct(elements, presult, 1, 1, width)
+
+    !Now, we figure out what size presult will have. It will be a Nxlen(elements) array where
+    !N=\prod_i len(elements_i)
+
+    allocate(presult(prod, size(elements,1)))
+    call rproduct(elements, presult, 1, 1, prod)
   end subroutine cproduct
 
   !!<summary>Recursively takes the product of the existing subsets in presult with the

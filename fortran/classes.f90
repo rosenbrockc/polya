@@ -30,13 +30,12 @@ IMPLICIT NONE
      !!<member name="parent">A Sequence instance for the variable to the *left* of this one (i.e. has index i-1).</member>
      !!<member name="varcount">The number of variables in the multinomial (also length of targets).</member>
      !!<member name="kids"></member>
-     integer :: root, used, varcount
+     integer :: root, used, varcount, kidcount
      class(Sequence), pointer :: parent => null()
      class(Sequence), pointer :: kids(:)
      contains
        procedure, public :: initialize => sequence_initialize
        procedure, public :: expand
-       procedure, public :: kidcount
        procedure, public :: finalize => sequence_finalize
   end type Sequence
 
@@ -106,8 +105,7 @@ contains
        this%used = this%root
     end if
 
-    this%varcount = size(possibles, 1)
-
+    this%varcount = size(targets, 1)
     allocate(kidroots(this%varcount))
     !We only keep recursively defining sequences until we run out of variables in
     !the term. Possibles is a list of possible exponents for each variable in the
@@ -124,22 +122,29 @@ contains
        kidcount = 0
        do j = 1, this%varcount
           p = possibles(j)
-          if ((p-root >= 0) .and. (p-root <= targets(j)) .and. &
-              (abs(p-root) <= powersum-this%used) .and. (mod(abs(p-this%used), possibles(1)) == 0)) then
-             kidcount = kidcount+1
-             kidroots(kidcount)= p-root
+          if (p-root >= 0) then
+             if ((p-root <= targets(depth)) .and. &
+                  (abs(p-root) <= powersum-this%used) .and. (mod(abs(p-this%used), possibles(2)) == 0)) then
+                kidcount = kidcount+1
+                kidroots(kidcount) = p-root
+             end if
           end if
        end do
-
        allocate(this%kids(kidcount))
+ 
        !Construct possible exponents for the variable to the right of this one based on the
        !possible choices we just calculated. This gets done recursively until we have a tree
        !of possible exponent values for the variables from left to right.
+       this%kidcount = 0
        do j = 1, kidcount
           call this%kids(j)%initialize(kidroots(j), possibles, depth+1, powersum, targets, this)
+          this%kidcount = this%kidcount + this%kids(j)%kidcount
        end do
+
+       if (this%kidcount .eq. 0) this%kidcount = kidcount
     else 
        this%kids => null()
+       this%kidcount = 0
     end if
   end subroutine sequence_initialize
   
@@ -150,44 +155,58 @@ contains
     deallocate(this%kids)
   end subroutine sequence_finalize
 
-  !!<summary>Counts the total number of kids and grandkids etc. to the latest generation.</summary>
-  recursive integer function kidcount(this)
-    class(Sequence) :: this
+  subroutine p2d(array)
+    integer, allocatable :: array(:,:)
     integer :: i
-
-    kidcount = 0
-    do i=1, size(this%kids,1)
-       kidcount = kidcount + this%kids(i)%kidcount()
+    do i=1, size(array, 1)
+       print *, array(i, :)
     end do
-  end function kidcount
+  end subroutine p2d
 
   !!<summary>Recursively generates a list of all relevant sequences for this multinomial term.</summary>
-  recursive subroutine expand(this, sequences, start, varindex)
+  recursive subroutine expand(this, sequences, pstart, varindex)
     class(Sequence) :: this 
     integer, intent(inout), allocatable :: sequences(:,:)
-    integer, intent(in) :: start, varindex
+    integer, intent(in) :: pstart, varindex
+    integer :: count
 
     !!<local name=""></local>
     !!<local name=""></local>
     integer :: j, k, cursor
+    integer :: start
 
     !!<comments>Iterate through the child sequences and add their variable root values if
     !!the total sequence sums to the target.</comments>
-    cursor = start
+    cursor = pstart
+    start = pstart
     if (.not. allocated(sequences)) then
-       allocate(sequences(this%kidcount(), this%varcount))
+       if (this%kidcount .eq. 0) then
+          allocate(sequences(1, this%varcount))
+       else
+          allocate(sequences(this%kidcount, this%varcount))
+       end if
+       sequences = 0
     end if
-    
-    do j = 1, size(this%kids,1)
-       !!<comments>Here is where the recursion happens; we add the sequence of this variable's
-       !!children to the right of this root.</comments>
-       call this%kids(j)%expand(sequences, cursor, varindex+1)
-       cursor = cursor + this%kids(j)%kidcount()
-       if (varindex .eq. this%varcount) cursor = cursor+1
-       do k = start, cursor-1
-          sequences(k,varindex) = this%root
-       end do
-    end do
+    if (associated(this%kids)) then
+       if (size(this%kids, 1) .eq. 0) then
+          sequences(cursor, varindex) = this%root
+       else
+           do j = 1, size(this%kids,1)
+              count = 0
+              !!<comments>Here is where the recursion happens; we add the sequence of this variable's
+              !!children to the right of this root.</comments>
+              call this%kids(j)%expand(sequences, cursor, varindex+1)
+              cursor = cursor + this%kids(j)%kidcount
+              if (varindex .eq. this%varcount-1) cursor = cursor+1
+              do k = start, cursor-1
+                 sequences(k,varindex) = this%root
+              end do
+              start = cursor
+           end do
+        end if
+    else
+       sequences(cursor,varindex) = this%root
+    end if
   end subroutine expand
 
   !!<summary>Initializes the empty product of multinomials.</summary>
@@ -217,8 +236,8 @@ contains
   integer function coeff(this)
     class(Product), intent(in) :: this
 
-    integer, allocatable :: possibles(:,:)!possibles(size(this%multinoms,1), size(this%targets,1))
-    integer :: i, j, z, coeffs, k, t 
+    class(vararray), allocatable :: possibles(:)
+    integer :: i, j, z, coeffs, k, t, count
     integer, allocatable :: seq0(:,:), expandedseq(:,:)
     integer :: seq(size(this%multinoms, 1))
     class(vararray2d), allocatable, target :: mnseq(:)
@@ -226,13 +245,10 @@ contains
     class(vararray), allocatable :: passin(:)
     class(vararray2d), pointer :: tempseq
 
-    print *, "in coeff"
-
-    allocate(possibles(size(this%multinoms,1), size(this%targets,1)))
+    allocate(possibles(size(this%multinoms,1)))
     allocate(mnseq(size(this%multinoms, 1)))
 
     !If this is an isolated multinomial, we only need to check the coefficient of the target term.
-    print *, "here"
     if (size(this%multinoms,1) == 1) then
        if (all(this%multinoms(1)%power-this%targets .gt. 0)) then
           coeff = 0          
@@ -244,57 +260,53 @@ contains
     !Get a list of the possible exponents for each variable in each of the multinomials.
     !We start with the first variable and choose only those combinations of exponents
     !across *all* the multinomials that give the correct target exponent for that variable.
-    print *, "here2"
     do i = 1, size(this%multinoms,1)
-       possibles(i,:) = this%multinoms(i)%possible_powers
        print *, this%multinoms(i)%possible_powers
+       print *, 'i in possibles', i
+       call possibles(i)%init(this%multinoms(i)%possible_powers)
     end do
 
-    print *, "here3"
-    allocate(passin(size(possibles,1)))
-    print *, "here3.1"
-    do i=1, size(this%multinoms,1)
-       print *, i
-       call passin(i)%init(possibles(i,:))
-    end do
-    print *, "here3.5"
-    print *, "here3.55"
-!    print *, passin
-    print *, size(possibles,2)
-    allocate(seq0(,size(possibles,2)))
-    call cproduct(passin, seq0)
-    print *, "here3.6"
+    call cproduct(possibles, seq0)
     !Next, we construct Sequence instances for each of the first variable compatible
     !possibilities and follow them through to the other variables.
-    print *, "here4"
     coeffs = 0
     allocate(varseq)
     allocate(tempseq)
+    print *, 'here'
+    print *, 'size(seq0,1)', size(seq0,1)
     do i = 1, size(seq0,1)
+       print *, 'i', i
        !Each sequence calculated from the first variable has an entry for each multinomial
        !in this product. The Sequence instances construct smart sequences for the remaining
        !variables in each multinomial separately.
-       print *,"here4.1"
        seq = seq0(i,:)
-       print *,"here4.2"
+       print *, 'size(seq,1)',size(seq,1)
        do j = 1, size(seq,1)
-          allocate(expandedseq())
-          call varseq%initialize(seq(i), possibles(i,:), 1, this%multinoms(i)%powersum, this%targets)
+          print *, 'here2'
+          print *, 'j', j
+          count = 0
+          print *, seq
+          print *, possibles(j)%items, 'br', this%multinoms(j)%powersum
+
+          call varseq%initialize(seq(j), possibles(j)%items, 2, this%multinoms(j)%powersum, this%targets)
+          print *, 'here2.1'
+          print *, 'here2.2'
           call varseq%expand(expandedseq, 1, 1)
-          print *, "here4.4"
+          print *, 'here2.3', expandedseq
           call mnseq(j)%init(expandedseq)
+          print *, 'here2.4'
           !Clean up the varsequence and expanded sequence variable.
           call varseq%finalize()
           deallocate(expandedseq)
        end do
-       print *, "here4.7"
+       print *, 'here3', mnseq(1)%items
        coeffs = coeffs + this%sum_sequence(mnseq)
        do j = 1, size(seq,1)    
           tempseq => mnseq(j)
           call tempseq%finalize()
        end do
     end do
-    print *, "here5"
+    print *, 'made it'
     coeff = coeffs*this%coefficient
   end function coeff
 
@@ -319,30 +331,33 @@ contains
     integer, allocatable :: irange(:)
 
     sum_sequence = 0
-    allocate(allseqs(size(mnseq),size(mnseq)))
+    ! print *, "SM12"
+    ! allocate(allseqs(size(mnseq),size(mnseq)))
     allocate(passin(size(mnseq,1)))
     !We could speed this up by keeping the ranges between loop iterations; if a two of the mnsequences have
     !the same number of elements, we could re-use the range. For now its not worth the extra complexity.
     do i=1, size(this%multinoms,1)
        allocate(irange(mnseq(i)%length))
        irange = (/( j, j=1, mnseq(i)%length, 1 )/)
-       call passin(i)%init(irange)
+       ! print *, "SM"
+       call passin(i)%init(irange,alloc=.true.)
        deallocate(irange)
+       ! print *, 'hele', passin(i)%items
     end do
     call cproduct(passin, allseqs)
-
     !Each row in allseqs now has a list of integer *indices* from mnseq that need to be used for the
     !coefficient calculations.
     do i = 1, size(allseqs, 1)
        !First we loop over the multinomials and extract the sequence corresponding to the index determined
        !by allseqs.
        do j = 1, size(this%multinoms, 1)
+          ! print *, allseqs
           seqlj(j,:) = mnseq(j)%items(allseqs(i,j),:)
        end do
        !Now that we have the sequences, we sum them up one variable at a time to make sure that they produce the
        !correct target term.
        do j=1, size(this%targets, 1)
-          expsum(j) = sum(seqlj(j,:))
+          expsum(j) = sum(seqlj(:,j))
        end do
        if (all(expsum .eq. this%targets)) then
           seqprod = 1
@@ -353,7 +368,7 @@ contains
        end if
     end do
 
-  END function sum_sequence
+  end function sum_sequence
 
   !!<summary>Sets up the multinomial.</summary>
   subroutine multinomial_initialize(this, power, exponent)
@@ -364,8 +379,7 @@ contains
     this%power = power
     this%exponent = exponent
     this%powersum = power*exponent
-    this%possible_powers = (/(j,j=0,power*exponent+1,power)/)
-
+    this%possible_powers = (/(j,j=0,power*exponent,power)/)
   end subroutine multinomial_initialize
 
   !!<summary>Returns the number of different ways to partition an n-element
@@ -382,7 +396,7 @@ contains
     else
        normseq = sequencei/this%power
        do j = 1, size(sequencei,1)
-          nsum = sum(normseq(0:j+1))
+          nsum = sum(normseq(1:j))
           nchoosekm = nchoosekm*nchoosek(nsum, normseq(j))
        end do
     end if
@@ -470,20 +484,24 @@ contains
        !Create the 2D multinomial array that defines r,d for each M_j^r.
        m = count(polynomials .gt. 0)
        allocate(mult(m,2))
-       do j=1, m
-          mindex = minval(polynomials, polynomials .gt. 0)
-          mult(j,1) = mindex
-          mult(j,2) = polynomials(mindex)
-          polynomials(mindex) = 0
+       mindex = 1
+       do j=1, size(polynomials, 1)
+          if (polynomials(j) /= 0) then
+             mult(mindex,1) = j
+             mult(mindex,2) = polynomials(j)
+             mindex = mindex + 1
+          end if
        end do
+
        !Find out if any of the existing products has this multinomial set already.
        dupindex = 0
        do j=1, pused
-          if (all(polyndict(j)%multinom_rd .eq. mult)) then
-             polyndict(j)%coefficient = polyndict(j)%coefficient + 1
-             dupindex = j
-             exit
-          end if   
+          if (all(shape(polyndict(j)%multinom_rd) .eq. shape(mult))) then
+             if (all(polyndict(j)%multinom_rd .eq. mult)) then
+                polyndict(j)%coefficient = polyndict(j)%coefficient + 1
+                dupindex = j
+             end if
+          end if
        end do
 
        if (dupindex == 0) then
