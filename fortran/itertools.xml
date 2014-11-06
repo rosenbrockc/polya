@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fortpy mode="docstring">
   <decorates name="itertools.cproduct">
-    <group name="test_cproduct" purpose="testing" >
+    <group name="test_cproduct" purpose="atesting">
       <test identifier="2d" description="2d cartesian product of 1D arrays"
 	    timed="true" cases="01" >
 	<output identifier="prod.out" folder="./tests" file="prod.out.{}" 

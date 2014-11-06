@@ -60,6 +60,18 @@ class Sequence(object):
         else:
             self.kids = []
 
+        self._kidcount = None
+        self.varcount = len(targets)
+
+    @property
+    def kidcount(self):
+        """Returns the number of children and grandchildren to the last generation."""
+        if self._kidcount is None:
+            _kidcount = sum([k.kidcount for k in self.kids])
+            if _kidcount == 0:
+                _kidcount = len(self.kids)
+        return _kidcount
+
     def expand(self):
         """Recursively generates a list of all relevant sequences for this multinomial term."""
         #Iterate through the child sequences and add their variable root values if
@@ -75,6 +87,30 @@ class Sequence(object):
             return [(self._root,)]
         else:
             return sequences
+
+    def expand_noappend(self, sequences, start, varindex):
+        """Implements an expansion that doesn't use python's append."""
+        if len(sequences) == 0:
+            if self.kidcount == 0:
+                raise ValueError("This can't happen!")
+            sequences = [[0]*self.varcount for i in range(self.kidcount)]
+
+        cursor = start
+        for kid in self.kids:
+            kid.expand_noappend(sequences, cursor, varindex+1)
+            cursor += kid.kidcount
+
+            if varindex == self.varcount-1:
+                cursor += 1
+
+            for k in range(start, cursor):
+                sequences[k][varindex-1] = self._root
+            start = cursor
+
+        if self.kidcount == 0:
+            sequences[cursor][varindex-1] = self._root
+            
+        return sequences
 
 class Product(object):
     """Represents a product of multinomials for which only a single term is interesting."""
@@ -118,7 +154,7 @@ class Product(object):
             #variables in each multinomial separately
             for i in range(len(seq)):
                 varseq = Sequence(seq[i], possibles[i], 1, self.multinoms[i].powersum, self.targets)
-                mnseq.append(varseq.expand())
+                mnseq.append(varseq.expand_noappend([],0,1))
 
             coeffs += self._sum_sequences(mnseq)
 

@@ -16,7 +16,7 @@ class Timer:
 
 class TestPolya(ut.TestCase):
     def setUp(self):
-        self.folder = "~/codes/projects/polya/tests"
+        self.folder = "~/codes/projects/polya/fortran/tests"
         self.pr = cProfile.Profile()
         self.generators = [{"gens": [[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1],
                                      [2, 3, 4, 1, 6, 7, 8, 5, 10, 11, 12, 9, 14, 15, 16, 13]],
@@ -59,7 +59,14 @@ class TestPolya(ut.TestCase):
                                       9, 14, 15, 16, 13, 18, 19, 20, 17]],
                             "concs": [5,8,7],
                             "size": 2500,
-                            "result": 43332}]
+                            "result": 43332},
+                           {"gens": [[2,3,4,1,5,6,7,8,9,10,11,12,13,14,15,16],
+                                     [1,2,3,4,6,7,8,5,9,10,11,12,13,14,15,16],
+                                     [1,2,3,4,5,6,7,8,10,11,12,9,13,14,15,16],
+                                     [1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,13]],
+                            "concs": [8,8],
+                            "size": 256,
+                            "result": 196}]
         self.groups = {}
 
     def gen_group(self, index):
@@ -89,8 +96,8 @@ class TestPolya(ut.TestCase):
             for i in range(len(seq)):
                 powersum = possibles[i][-1]*possibles[i][1]
                 varseq = Sequence(seq[i], possibles[i], 1, powersum, self.generators[index]["concs"])
-                seqexp = varseq.expand()
-                save([seqexp],["seqexp.{}".format(i)],self.folder,case=index,infile=False)
+                varexp = varseq.expand()
+                save([varexp],["seqexp.{}".format(i)],self.folder,case=index,infile=False)
 
     def gen_test(self, index):
         single = self.generators[index]
@@ -110,19 +117,21 @@ class TestPolya(ut.TestCase):
         self.assertEqual(coeff, single["result"], 
                          "{} => {}".format(single["gens"], single["result"]))
 
+    @ut.skip("Once-off Okay!")
     def test_groups(self):
         for i in range(len(self.generators)):
             self.gen_group(i)
 
+    @ut.skip("Once-off Okay!")
     def test_sequences(self):
         for i in range(len(self.generators)):
             self.gen_sequence(i)
 
     def test_coefficients(self):
         for i in range(len(self.generators)):
-            self.gen_test(i)
+           self.gen_test(i)
 
-        p = Stats(self.pr)
-        p.strip_dirs()
-        p.sort_stats('cumtime')
-        p.print_stats()
+        # p = Stats(self.pr)
+        # p.strip_dirs()
+        # p.sort_stats('cumtime')
+        # p.print_stats()

@@ -1,33 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fortpy mode="docstring">
-  <decorates name="classes.sequence_initialize">
-    <group name="sequence" purpose="testing">
-      <test identifier="initialize" description="Test recursive sequence initialization"
-	    timed="true" >
-	<input folder="./tests" file="nchoosek.in">
-	  <line id="n_k" type="integer" values="2" names="n, k" />
-	</input>  
-	<output identifier="nchoosek.out" folder="./tests" file="nchoosek.out" 
+  <decorates name="classes.polya">
+    <group name="coefficient_tests" purpose="testingp">
+      <test identifier="standard" description="Same tests used for the
+					       python unit tests."
+	    timed="true" cases="1,2,3,4,5,6,7">
+	<output identifier="result.out" folder="./tests" file="result.out.{}" 
 		template="integer.xml" />
-	<target name="[default]" compareto="nchoosek.out" varfile="nchoosek.out" when="each" />
+	<target name="[default]" compareto="result.out" varfile="polya.out" when="each" />
       </test>
-      <global name="n" type="integer" />
-      <global name="k" type="integer" />
+      <assignment name="group" value="group_gens"> 
+	<value identifier="group_gens" folder="./tests"
+	       file="generators.in.{}" rename="generators.in" />
+      </assignment>
+      <assignment name="concentrations" value="concs"> 
+	<value identifier="concs" folder="./tests"
+	       file="concs.in.{}" rename="concs.in" />
+      </assignment>
+      <prereq method="group_theory.grouper" paramlist="group" />
     </group>
   </decorates>
-  <decorates name="combinatorics.nchoosek_orig">
-    <group name="binomial_tests" purpose="testing" staging="./unittests/">
-      <test identifier="original" description="Original binomial function testing"
+  <decorates name="classes.nchoosekm">
+    <group name="multinomial_tests" purpose="testing">
+      <test identifier="Manolopoulos" description="Multinomial with
+						   Binomials Testing"
 	    timed="true" >
-	<input folder="./tests" file="nchoosek.in">
-	  <line id="n_k" type="integer" values="2" names="n, k" />
+	<input folder="./tests" file="nchoosekm.in">
+	  <line id="seq" type="integer" values="*" names="sequence" />
 	</input>  
-	<output identifier="nchoosek.out" folder="./tests" file="nchoosek.out" 
+	<output identifier="nchoosekm.out" folder="./tests" file="nchoosekm.out" 
 		template="integer.xml" />
-	<target name="[default]" compareto="nchoosek.out" varfile="nchoosek.out" when="each" />
+	<target name="[default]" compareto="nchoosekm.out" varfile="nchoosekm.out" when="each" />
       </test>
-      <global name="n" type="integer" />
-      <global name="k" type="integer" />
+      <global name="sequence" type="integer" dimension="3" />
+      <global name="this" type="class" kind="Multinomial" modifiers="pointer" />
+      <assignment name="this" value="initfun">
+	<value identifier="initfun" embedded="initialize"
+	       paramlist="1, 1" allocate="true" prereqs="true" />
+      </assignment>
     </group>
   </decorates>
 </fortpy>
