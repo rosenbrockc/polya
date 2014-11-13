@@ -10,10 +10,12 @@ def _get_filename(absdir, name, infile=True, case=None):
     :arg case: the identifier for the variable set that the variable belongs to.
     """
     from os import path
-    if infile:
+    if infile == True:
         suffix = "{}.in".format(name.lower())
-    else:
+    elif infile==False:
         suffix = "{}.out".format(name.lower())
+    else:
+        suffix = name.lower()
 
     if case is None:
         return path.join(absdir, suffix)

@@ -72,19 +72,22 @@ class Sequence(object):
                 _kidcount = len(self.kids)
         return _kidcount
 
-    def expand(self):
+    def expand(self, depth=0):
         """Recursively generates a list of all relevant sequences for this multinomial term."""
         #Iterate through the child sequences and add their variable root values if
         #the total sequence sums to the target.
         sequences = []
         for kid in self.kids:
-            for seq in kid.expand():
+            for seq in kid.expand(depth+1):
                 #Here is where the recursion happens; we add the sequence of this variable's
                 #children to the right of this root.
                 sequences.append((self._root,) + seq)
 
         if len(self.kids) == 0:
-            return [(self._root,)]
+            if depth == self.varcount-1:
+                return [(self._root,)]
+            else:
+                return [(self._root,) + (0,)*(self.varcount-(depth+1))]
         else:
             return sequences
 
@@ -154,8 +157,7 @@ class Product(object):
             #variables in each multinomial separately
             for i in range(len(seq)):
                 varseq = Sequence(seq[i], possibles[i], 1, self.multinoms[i].powersum, self.targets)
-                mnseq.append(varseq.expand_noappend([],0,1))
-
+                mnseq.append(varseq.expand())
             coeffs += self._sum_sequences(mnseq)
 
         return int(coeffs)*self.coefficient

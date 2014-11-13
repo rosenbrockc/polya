@@ -66,10 +66,25 @@ contains
   end subroutine vararray_init
 
   !!<summary>Initializes the array items and length property.</summary>
-  subroutine vararray2d_init(self, array)
+  subroutine vararray2d_init(self, array, alloc)
     class(vararray2d) :: self
     integer, target, intent(in) :: array(:,:)
-    self%items => array
+    logical, optional, intent(in) :: alloc
+
+    logical :: nalloc
+    !We need to see if we are *copying* the array, or just referencing it.
+    if (present(alloc)) then
+       nalloc = alloc
+    else
+       nalloc = .false.
+    end if
+
+    if (nalloc) then
+       allocate(self%items(size(array, 1), size(array,2)))
+       self%items = array
+    else
+       self%items => array
+    end if
     self%length = size(self%items, 1)
   end subroutine vararray2d_init
 

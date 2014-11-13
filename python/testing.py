@@ -1,5 +1,6 @@
 import unittest as ut
-from polya import polya, group, _group_to_cyclic, Sequence
+from polya import *
+from polya import _group_to_cyclic
 import cProfile
 import time
 from pstats import Stats
@@ -68,6 +69,8 @@ class TestPolya(ut.TestCase):
                             "size": 256,
                             "result": 196}]
         self.groups = {}
+        self.products = {}
+        self.total = 0
 
     def gen_group(self, index):
         """Tests the group generation from the generators."""
@@ -80,6 +83,20 @@ class TestPolya(ut.TestCase):
             save([grpops],["group"],self.folder,infile=False,case=index)
             self.groups[index] = grpops
 
+    def gen_product(self, index):
+        """Tests the construction of a Product of multinomials."""
+        self.gen_group(index)
+        #We only need to test the first operation in each group since we are testing the class
+        #initializer.
+        cyclic = _group_to_cyclic(self.groups[index],(0,1))[0]        
+        p = Product(1, self.generators[index]["concs"])
+        marray = []
+        for exp in cyclic:
+            p.multinoms.append(Multinomial(exp, cyclic[exp]))
+            marray.append([exp, cyclic[exp]])
+        self.products[index] = p
+        save([marray], ["multinomial"], self.folder, case=index)
+
     def gen_sequence(self, index):
         """Tests the Sequence class of Polya's initialization and expand method."""
         from itertools import product
@@ -87,17 +104,51 @@ class TestPolya(ut.TestCase):
         #We only need to test the first operation in each group since later unit tests
         #will confirm the totals for the entire group.
         cyclic = _group_to_cyclic(self.groups[index],(0,1))[0]
-        possibles = [list(range(0,power*cyclic[power]+1, power)) for power in cyclic.keys()]
+        keys = list(cyclic.keys())
+        possibles = [list(range(0,power*cyclic[power]+1, power)) for power in keys]
         seqbase = [s for s in product(*possibles) if sum(s) == self.generators[index]["concs"][0]]
-        save([seqbase],["seqbase"],self.folder,case=index)
+        powersums = [k*cyclic[k] for k in keys]
+        save([possibles],["possibles"],self.folder,case=index)
 
+        from random import randint
         if len(seqbase) > 0:
-            seq = seqbase[0]
+            irand = randint(0, len(seqbase)-1)
+            seq = seqbase[irand]
+            key = keys[0]
+            mnseq = []
+            save([seq],["seq"],self.folder,case=index)
             for i in range(len(seq)):
-                powersum = possibles[i][-1]*possibles[i][1]
+                powersum = key*cyclic[key]
                 varseq = Sequence(seq[i], possibles[i], 1, powersum, self.generators[index]["concs"])
                 varexp = varseq.expand()
-                save([varexp],["seqexp.{}".format(i)],self.folder,case=index,infile=False)
+                mnseq.append(varexp)
+                save([varexp, varseq.kidcount], ["seqexp.{}".format(i), "kidcount.{}".format(i)],
+                     self.folder,case=index,infile=False)
+
+            save(mnseq,["mnseq.in.{}".format(i+1) for i in range(len(mnseq))],self.folder, 
+                 infile=None, case=index)
+            save([len(mnseq)], ["mnseq.len"], self.folder, case=index)
+            if index not in self.products:
+                self.gen_product(index)
+            p = self.products[index]
+            sumseq = int(p._sum_sequences(mnseq))
+            save([sumseq], ["sum_seq"], self.folder, infile=False, case=index)
+
+        coeffs = 0
+        if index not in self.products:
+            self.gen_product(index)
+        p = self.products[index]
+        for seq in seqbase:
+            mnseq = []
+            #Each sequence calculated from the first variable has an entry for each multinomial
+            #in this product. The Sequence instances construct smart sequences for the remaining
+            #variables in each multinomial separately
+            for i in range(len(seq)):
+                varseq = Sequence(seq[i], possibles[i], 1, powersums[i], self.generators[index]["concs"])
+                mnseq.append(varseq.expand())
+            coeffs += int(p._sum_sequences(mnseq))
+
+        save([coeffs],["coeffs"], self.folder, infile=False, case=index)
 
     def gen_test(self, index):
         single = self.generators[index]
@@ -112,6 +163,7 @@ class TestPolya(ut.TestCase):
             self.pr.enable()
             coeff = polya(single["concs"], grpops)
             self.pr.disable()
+        self.total += t.interval
         tstr = 'in %.05f sec.' % t.interval
         print("{}x{} => {} {}".format(len(single["gens"]), len(single["gens"][0]), single["result"], tstr))
         self.assertEqual(coeff, single["result"], 
@@ -122,14 +174,19 @@ class TestPolya(ut.TestCase):
         for i in range(len(self.generators)):
             self.gen_group(i)
 
-    @ut.skip("Once-off Okay!")
     def test_sequences(self):
         for i in range(len(self.generators)):
             self.gen_sequence(i)
 
+    @ut.skip("Once-off Okay!")
+    def test_products(self):
+        for i in range(len(self.generators)):
+            self.gen_product(i)
+
     def test_coefficients(self):
         for i in range(len(self.generators)):
            self.gen_test(i)
+        print("TOTAL: %.06f" % self.total)
 
         # p = Stats(self.pr)
         # p.strip_dirs()

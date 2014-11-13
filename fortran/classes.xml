@@ -1,23 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fortpy mode="docstring">
   <decorates name="classes.polya">
-    <group name="coefficient_tests" purpose="testingp">
+    <group name="coefficient_tests" purpose="testing">
       <test identifier="standard" description="Same tests used for the
 					       python unit tests."
-	    timed="true" cases="1,2,3,4,5,6,7">
+	    timed="true" cases="0,1,2,3,4,5,6,7">
 	<output identifier="result.out" folder="./tests" file="result.out.{}" 
 		template="integer.xml" />
 	<target name="[default]" compareto="result.out" varfile="polya.out" when="each" />
       </test>
-      <assignment name="group" value="group_gens"> 
-	<value identifier="group_gens" folder="./tests"
-	       file="generators.in.{}" rename="generators.in" />
+      <global name="polynomials" type="integer"
+	      modifiers="allocatable" dimensions=":,:" />
+      <assignment name="group" value="group_ops" allocate="true"> 
+	<value identifier="group_ops" folder="./tests"
+	       file="group.out.{}" rename="group.in" />
+      </assignment>
+      <assignment name="group" value="group_plusone">
+	<value identifier="group_plusone" constant="group+1" />
+      </assignment>
+      <assignment name="polynomials" 
+		  allocate="size(group, 1), size(group,2)" />
+      <assignment name="decompose" value="const">
+	<value identifier="const" constant=".true." />
       </assignment>
       <assignment name="concentrations" value="concs"> 
 	<value identifier="concs" folder="./tests"
 	       file="concs.in.{}" rename="concs.in" />
       </assignment>
-      <prereq method="group_theory.grouper" paramlist="group" />
     </group>
   </decorates>
   <decorates name="classes.nchoosekm">
@@ -26,18 +35,159 @@
 						   Binomials Testing"
 	    timed="true" >
 	<input folder="./tests" file="nchoosekm.in">
-	  <line id="seq" type="integer" values="*" names="sequence" />
+	  <line id="seq" type="integer" values="*" names="sequencei" />
 	</input>  
 	<output identifier="nchoosekm.out" folder="./tests" file="nchoosekm.out" 
 		template="integer.xml" />
 	<target name="[default]" compareto="nchoosekm.out" varfile="nchoosekm.out" when="each" />
       </test>
-      <global name="sequence" type="integer" dimension="3" />
+      <global name="sequencei" type="integer" dimensions="3" />
       <global name="this" type="class" kind="Multinomial" modifiers="pointer" />
-      <assignment name="this" value="initfun">
+      <assignment name="this" value="initfun" allocate="true">
 	<value identifier="initfun" embedded="initialize"
-	       paramlist="1, 1" allocate="true" prereqs="true" />
+	       paramlist="1, 1" />
       </assignment>
+    </group>
+  </decorates>
+  <decorates name="classes.nchoosek">
+    <group name="binomial_tests" purpose="testing">
+      <test identifier="Manolopoulos" description="Yannis Manolopoulos
+						   binomial function testing"
+	    timed="true" >
+	<input folder="./tests" file="nchoosek.in">
+	  <line id="n_k" type="integer" values="2" names="n, k" />
+	</input>  
+	<output identifier="nchoosek.out" folder="./tests" file="nchoosek.out" 
+		template="integer.xml" />
+	<target name="[default]" compareto="nchoosek.out" varfile="nchoosek.out" when="each" />
+      </test>
+    </group>
+  </decorates>
+  <decorates name="classes.product_initialize">
+    <group name="init_group" purpose="testing">
+      <test identifier="product_init" 
+	    description="Check initialization of the product class"
+	    timed="true" cases="0,1,2,3,4,5,6,7">
+	<output identifier="constant" value="1" />
+	<target name="coefficient" compareto="constant" varfile="coefficient.out" when="each" />
+      </test>
+      <assignment name="multinomials" value="mnfile" allocate="true">
+	<value identifier="mnfile" file="multinomial.in.{}"
+	       folder="./tests" rename="multinomials.in" />
+      </assignment>
+      <assignment name="targets" value="targfile" allocate="true">
+	<value identifier="targfile" file="concs.in.{}"
+	       folder="./tests" rename="targets.in" />
+      </assignment>
+      <assignment name="coefficient" value="constant">
+	<value identifier="constant" constant="1" />
+      </assignment>
+      <assignment name="this" allocate="true" />
+    </group>
+  </decorates>
+  <decorates name="classes.sequence_initialize">
+    <group name="init_group" purpose="testing">
+      <test identifier="seq_init" 
+	    description="Test recursive initialization of exponent sequences"
+	    timed="true" cases="0,1,2,5,7">
+	<output identifier="kidcount.out" folder="./tests" file="kidcount.0.out.{}" 
+		template="integer.xml" />
+	<target name="this" member="kidcount" compareto="kidcount.out" varfile="kidcount.out" when="each" />
+      </test>
+      <global name="poss_ragged" type="class" kind="vararray"
+	      modifiers="pointer" dimensions=":" />
+      <global name="parent" ignore="true" />
+      <global name="multinomials" type="integer" dimensions=":,:"
+	      modifiers="allocatable" />
+      <global name="seqfirst" type="integer" modifiers="allocatable"
+	      dimensions=":" />
+      <assignment name="poss_ragged" value="init" allocate="true">
+	<value identifier="init" embedded="init" dtype="integer" rename="possibles.in"
+	       paramlist="@file,alloc=.true." file="possibles.in.{}"
+	       ragged="true" folder="./tests" filedim="1" />
+      </assignment>
+      <assignment name="targets" value="targfile" allocate="true">
+	<value identifier="targfile" file="concs.in.{}"
+	       folder="./tests" rename="targets.in" />
+      </assignment>
+      <assignment name="seqfirst" value="seqfile" allocate="true">
+	<value identifier="seqfile" file="seq.in.{}"
+	       folder="./tests" rename="seq.in" />
+      </assignment>
+      <assignment name="root" value="constant">
+	<value identifier="constant" constant="seqfirst(1)" />
+      </assignment>
+      <assignment name="depth" value="constant">
+	<value identifier="constant" constant="2" />
+      </assignment>
+      <assignment name="multinomials" value="mnfile" allocate="true">
+	<value identifier="mnfile" file="multinomial.in.{}"
+	       folder="./tests" rename="multinomials.in" />
+      </assignment>
+      <assignment name="powersum" value="constant">
+	<value identifier="constant" 
+	       constant="multinomials(1,1)*multinomials(1,2)" />
+      </assignment>
+      <assignment name="possibles" value="constant">
+	<value identifier="constant" 
+	       constant="poss_ragged(1)%items" />
+      </assignment>
+      <assignment name="this" allocate="true" />
+    </group>
+  </decorates>
+  <decorates name="classes.expand">
+    <group name="expand_group" purpose="testing">
+      <test identifier="expansion" 
+	    description="Test recursive expansion of exponent sequences"
+	    timed="true" cases="0">
+	<output identifier="seqexp.out" folder="./tests" file="seqexp.0.out.{}" 
+		template="integer.xml" />
+	<target name="sequences" compareto="seqexp.out" varfile="seqexp.out" when="each" />
+      </test>
+      <assignment name="pstart" value="constant">
+	<value identifier="constant" constant="1" />
+      </assignment>
+      <assignment name="varindex" value="constant">
+	<value identifier="constant" constant="1" />
+      </assignment>
+      <prereq method="classes.sequence_initialize" />
+    </group>
+  </decorates>
+  <decorates name="classes.sum_sequence">
+    <group name="sum_group" purpose="testing">
+      <test identifier="sum_seq" 
+	    description="Test summing of cartesian product of exponent sequences"
+	    timed="true" cases="0,1,2,5,7" >
+	<output identifier="sum_seq.out" folder="./tests" file="sum_seq.out.{}" 
+		template="integer.xml" />
+	<target name="[default]" compareto="sum_seq.out" varfile="sum_seq.out" when="each" />
+      </test>
+      <global name="mnseq" type="class" kind="vararray2d"
+	      modifiers="pointer" dimensions=":" />
+      <global name="mnseq_len" type="integer" />
+      <assignment name="mnseq_len" value="mnfile">
+	<value identifier="mnfile" file="mnseq.len.in.{}"
+	       rename="mnseq.len.in" folder="./tests" />
+      </assignment>
+      <assignment name="mnseq" value="arrpart" allocate="mnseq_len">
+	<value identifier="initfun" embedded="init" file="mnseq.in.*"
+	       folder="./tests" dtype="integer"
+	       paramlist="@file,alloc=.true." filedim="2" />
+	<part identifier="arrpart" value="initfun" limits="1-mnseq_len" />
+      </assignment>
+      <prereq method="classes.product_initialize" />
+    </group>
+  </decorates>
+  <decorates name="classes.coeff">
+    <group name="coeff_group" purpose="testing">
+      <test identifier="coeff" 
+	    description="Test coefficient calculation for a single product."
+	    timed="true" cases="0,1,2,5,7" >
+	<output identifier="coeff.out" folder="./tests" file="coeffs.out.{}" 
+		template="integer.xml" />
+	<target name="[default]" compareto="coeff.out" varfile="coeff.out" when="each" />
+      </test>
+      <prereq method="classes.product_initialize" />
     </group>
   </decorates>
 </fortpy>
