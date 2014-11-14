@@ -490,6 +490,12 @@ contains
     integer :: i, j, m, mindex, dupindex, pused = 0, b =0, d = 1
     logical :: ldecomp
 
+    !This checks that the specified concentration matches the number of sites the group is 
+    !acting on.
+    if (sum(concentrations) .ne. size(group,2)) then
+       stop "Error, the concentrations don't add up to the number of sites being used!"
+    end if
+
     !These checks allow a pre-compiled r-cycle structure for the group to be passed in
     !as the form of the polynomials array.
     if (.not. present(polynomials)) then

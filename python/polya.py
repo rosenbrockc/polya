@@ -353,6 +353,14 @@ def polya(concentrations, group, debug=False):
       be present in each of the enumerated lists.
     :arg group: group operations for permuting the colorings.
     """
+
+    #This is to check that the concentrations sum to the number of sites the group is
+    #operating on
+    if sum(concentrations) != len(group[1]):
+        print("The concentrations don't sum to the number of things the group is acting on!")
+        exit()
+        
+        
     polyndict = {}
     #The operations in the group are used to construct the unique polynomials for each operation.
     for polynomials in _group_to_cyclic(group):
