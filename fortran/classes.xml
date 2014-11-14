@@ -173,7 +173,7 @@
 	<value identifier="initfun" embedded="init" file="mnseq.in.*"
 	       folder="./tests" dtype="integer"
 	       paramlist="@file,alloc=.true." filedim="2" />
-	<part identifier="arrpart" value="initfun" limits="1-mnseq_len" />
+	<part identifier="arrpart" value="initfun" limits="1:mnseq_len" />
       </assignment>
       <prereq method="classes.product_initialize" />
     </group>
