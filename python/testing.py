@@ -1,3 +1,27 @@
+"""This program produces input files for testing the enumeration code. Due to the shortness of 
+this project there is some code duplication that has occured from the main code and here. For 
+some of the tests array elements are choosen usinchg a random number so if new tests are desired 
+or required please be sure to remove the previously generated input files before generating the 
+new ones or the unit test may fail.
+
+Output files include:
+coeffs.out.*
+concs.in.*
+generators.in.*
+group.out.*
+kidcount.*.out.*
+mnseq.in.*
+mnseq.len.in.*
+multinomial.in.*
+possibles.in.*
+prod.out.*
+prod.seq.*
+result.out.*
+seq.in.*
+seqexp.*.out.*
+sum_seq.out.*
+where the *s refer to the case, or trest group, number.
+"""
 import unittest as ut
 from polya import *
 from polya import _group_to_cyclic
@@ -7,16 +31,35 @@ from pstats import Stats
 from testgen import save, load
 
 class Timer:    
+"""This class impliments a timer that is used to time and profile the code as it runs.
+"""
     def __enter__(self):
+        """Sets the start time of the process being timed"""
         self.start = time.clock()
         return self
 
     def __exit__(self, *args):
+        """Sets the end time of the code after it is done running then returns the difference
+        between start and stop times as the runtime for the code.
+        """
         self.end = time.clock()
         self.interval = self.end - self.start
 
 class TestPolya(ut.TestCase):
+    """Runs the polya python code on each identified test group and builds appropriate input and
+    output files for the fortran code."""
     def setUp(self):
+        """Sets up the test groups and the folder where the resultant testing files should be 
+        saved for the fortran tests.
+        self.folder is the directory that the files will be saved in.
+        self.generators stores the test groups to be used in the following format:
+           {"gens": [the generators for the group]
+            "concs": [the concentrations the different colors, objects, being enumerated]
+            "size": the number of operations in the group
+            "result": the number of unique arrangements after enumeration.}
+        Also initializes an array for profiling the code and dictionaries for the groups and 
+        products to be stored in.
+        """
         self.folder = "~/Documents/research/enum4/polya/fortran/tests"
         self.pr = cProfile.Profile()
         self.generators = [{"gens": [[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 1],
@@ -148,18 +191,22 @@ class TestPolya(ut.TestCase):
         self.total = 0
 
     def gen_group(self, index):
-        """Tests the group generation from the generators."""
+        """Tests the group generation from the generators. The method outputs generators.in.* 
+        and group.out.*"""
         if index not in self.groups:
             single = self.generators[index]
             gens = single["gens"]
             save([gens],["generators"],self.folder,case=index)
             grpops = group(gens)
-            self.assertEqual(len(grpops), single["size"], "{} != {}".format(len(grpops), single["size"]))
+            self.assertEqual(len(grpops), single["size"], "{} != {}".format(len(grpops), 
+                                                                            single["size"]))
+            #Save the input/output files for the fortran unit tests.
             save([grpops],["group"],self.folder,infile=False,case=index)
             self.groups[index] = grpops
 
     def gen_product(self, index):
-        """Tests the construction of a Product of multinomials."""
+        """Tests the construction of a Product of multinomials. The method outputs 
+        multinomial.in.* """
         self.gen_group(index)
         #We only need to test the first operation in each group since we are testing the class
         #initializer.
@@ -167,13 +214,16 @@ class TestPolya(ut.TestCase):
         p = Product(1, self.generators[index]["concs"])
         marray = []
         for exp in cyclic:
+            #turns the product into a multinomial class
             p.multinoms.append(Multinomial(exp, cyclic[exp]))
             marray.append([exp, cyclic[exp]])
         self.products[index] = p
+        #Save the input/output files for the fortran unit tests.
         save([marray], ["multinomial"], self.folder, case=index)
 
     def gen_sequence(self, index):
-        """Tests the Sequence class of Polya's initialization and expand method."""
+        """Tests the Sequence class of Polya's initialization and expand method. The method
+        outputs possibles.in.*, seqexp.*.out.*, kidcount.*.out.*, mnseq.in.*, and coeffs.out.*"""
         from itertools import product
         self.gen_group(index)
         #We only need to test the first operation in each group since later unit tests
@@ -183,30 +233,46 @@ class TestPolya(ut.TestCase):
         possibles = [list(range(0,power*cyclic[power]+1, power)) for power in keys]
         seqbase = [s for s in product(*possibles) if sum(s) == self.generators[index]["concs"][0]]
         powersums = [k*cyclic[k] for k in keys]
+        #Save the input/output files for the fortran unit tests.
         save([possibles],["possibles"],self.folder,case=index)
 
+        #We choose a random number here to ensure that the sequences that are selected are not
+        #all trivial, ie all zeros, producing a better test group for the expand method.
+        #Here we also have some code duplication from the polya code to accomadate the radom
+        #number implementation.
         from random import randint
         if len(seqbase) > 0:
             irand = randint(0, len(seqbase)-1)
+            #choose a random sequence for the unittest
             seq = seqbase[irand]
             key = keys[0]
             mnseq = []
             save([seq],["seq"],self.folder,case=index)
             for i in range(len(seq)):
+                #For each sequence we calculate a powersum. The sequence intances are then 
+                #contsructed and expanded.
                 powersum = key*cyclic[key]
-                varseq = Sequence(seq[i], possibles[i], 1, powersum, self.generators[index]["concs"])
+                varseq = Sequence(seq[i], possibles[i], 1, powersum, 
+                                  self.generators[index]["concs"])
                 varexp = varseq.expand()
+                #append each expanded sequence to the mnseq array
                 mnseq.append(varexp)
+                #Save the input/output files for the fortran unit tests.
                 save([varexp, varseq.kidcount], ["seqexp.{}".format(i), "kidcount.{}".format(i)],
                      self.folder,case=index,infile=False)
 
+            #Save the input/output files for the fortran unit tests.
             save(mnseq,["mnseq.in.{}".format(i+1) for i in range(len(mnseq))],self.folder, 
                  infile=None, case=index)
             save([len(mnseq)], ["mnseq.len"], self.folder, case=index)
+
+            #add this to our dictionary of products if it's not there yet
             if index not in self.products:
                 self.gen_product(index)
             p = self.products[index]
             sumseq = int(p._sum_sequences(mnseq))
+            
+            #Save the input/output files for the fortran unit tests.
             save([sumseq], ["sum_seq"], self.folder, infile=False, case=index)
 
         coeffs = 0
@@ -219,13 +285,17 @@ class TestPolya(ut.TestCase):
             #in this product. The Sequence instances construct smart sequences for the remaining
             #variables in each multinomial separately
             for i in range(len(seq)):
-                varseq = Sequence(seq[i], possibles[i], 1, powersums[i], self.generators[index]["concs"])
+                varseq = Sequence(seq[i], possibles[i], 1, powersums[i], 
+                                  self.generators[index]["concs"])
                 mnseq.append(varseq.expand())
             coeffs += int(p._sum_sequences(mnseq))
 
+        #Save the input/output files for the fortran unit tests.
         save([coeffs],["coeffs"], self.folder, infile=False, case=index)
 
     def gen_test(self, index):
+        """ Tests the polya code for each of the given test cases. The method outputs concs.in.*
+        and results.out.*"""
         single = self.generators[index]
         self.gen_group(index)
         grpops = self.groups[index]
@@ -234,34 +304,39 @@ class TestPolya(ut.TestCase):
         save([single["concs"]],["concs"],self.folder,case=index)
         save([single["result"]],["result"],self.folder,case=index,infile=False)
 
+        #Time the polya code while getting the output for testing
         with Timer() as t:
             self.pr.enable()
             coeff = polya(single["concs"], grpops)
             self.pr.disable()
         self.total += t.interval
         tstr = 'in %.05f sec.' % t.interval
-        print("{}x{} => {} {}".format(len(single["gens"]), len(single["gens"][0]), single["result"], tstr))
+
+        #print the result and the generators to the screen.
+        print("{}x{} => {} {}".format(len(single["gens"]), len(single["gens"][0]), 
+                                      single["result"], tstr))
         self.assertEqual(coeff, single["result"], 
                          "{} => {} != {}".format(single["gens"], single["result"], coeff))
 
     def test_groups(self):
+        """Builds an array of the group for testing"""
         for i in range(len(self.generators)):
             self.gen_group(i)
 
     def test_sequences(self):
+        """Builds an array of the sequences for testing."""
         for i in range(len(self.generators)):
             self.gen_sequence(i)
 
     def test_products(self):
+        """Builds an array the products for testing."""
         for i in range(len(self.generators)):
             self.gen_product(i)
 
     def test_coefficients(self):
+        """Runs a test of the code and checks the results then prints the accurracy, as 
+        percent correct, to the screen"""
         for i in range(len(self.generators)):
            self.gen_test(i)
         print("TOTAL: %.06f" % self.total)
 
-        # p = Stats(self.pr)
-        # p.strip_dirs()
-        # p.sort_stats('cumtime')
-        # p.print_stats()
