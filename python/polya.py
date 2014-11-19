@@ -282,7 +282,7 @@ def group(gen):
 
     groupi = []
     for i in ngens:
-        for j in filter(lambda k: k!=i, ngens):
+        for j in ngens: #filter(lambda k: k!=i, ngens):
             c = g_apply(i, j, groupi)
             d = g_apply(i, c, groupi)
             while d != c:
@@ -299,7 +299,6 @@ def group(gen):
         groupi.extend(group2)
         if len(group2) == 0:
             break
-        
     return(groupi)
 
 def _group_to_cyclic(group, limit=None):
