@@ -30,7 +30,7 @@
     </group>
   </decorates>
   <decorates name="classes.nchoosekm">
-    <group name="multinomial_tests" purpose="testing_skip">
+    <group name="multinomial_tests" purpose="testing">
       <test identifier="Manolopoulos" description="Multinomial with
 						   Binomials Testing"
 	    timed="true" >
@@ -50,7 +50,7 @@
     </group>
   </decorates>
   <decorates name="classes.nchoosek">
-    <group name="binomial_tests" purpose="testing_skip">
+    <group name="binomial_tests" purpose="testing">
       <test identifier="Manolopoulos" description="Yannis Manolopoulos
 						   binomial function testing"
 	    timed="true" >
