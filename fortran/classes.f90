@@ -242,7 +242,7 @@ contains
 
   !!<summary>Returns the coefficient of the term with the target exponents if all the multinomials
   !!in the product were expanded and had their terms collected.</summary>
-  integer function coeff(this)
+  integer(lint) function coeff(this)
     class(Product), intent(in) :: this
 
     !!<local name="possibles">
@@ -326,7 +326,7 @@ contains
   !!lists specified.</summary>
   !!<parameter name="mnseq">a list of possible variable sequences in each 
   !!multinomial (one for each multinomial) that might contribute to the correct target variable.</parameter>
-  integer function sum_sequence(this, mnseq)
+  integer(lint) function sum_sequence(this, mnseq)
     class(Product), intent(in) :: this
     class(vararray2d), intent(in) :: mnseq(size(this%multinoms,1))
 
@@ -342,7 +342,7 @@ contains
     !!<local name="expsum">Temporary sum of the exponents across all adjacent sequences in the product 
     !!(per variable).</local>
     !!<local name="irange">Temporary range from 1..len(mnesq) for constructing the cartesian product.</local>
-    integer :: seqprod
+    integer(lint) :: seqprod
     integer, allocatable :: allseqs(:,:)
     integer :: seqlj(size(this%multinoms, 1), size(this%targets, 1)), expsum(size(this%targets, 1))
     integer, allocatable :: irange(:)
@@ -400,10 +400,11 @@ contains
   !!<summary>Returns the number of different ways to partition an n-element
   !!set into disjoint subsets of sizes k1, ..., km.</summary>
   !!<parameter name="sequencei">an un-normed tuple of form (k1, k2, k3)."</parameter>
-  integer function nchoosekm(this, sequencei)
+  integer(lint) function nchoosekm(this, sequencei)
     class(Multinomial), intent(in) :: this
     integer, intent(in) :: sequencei(:)
-    integer :: j, nsum
+    integer :: j
+    integer :: nsum
     integer :: normseq(size(sequencei,1))
 
     if (.not. all(mod(sequencei, this%power) == 0)) then
@@ -462,7 +463,7 @@ contains
   !!the group operation.</parameter>
   !!<parameter name="decompose" regular="true">Specifies whether the r-cycle structure of the
   !!polynomials array should be found explicitly.</parameter>
-  integer function polya(concentrations, group, polynomials, decompose)
+  integer(lint) function polya(concentrations, group, polynomials, decompose)
     integer, allocatable, intent(in) :: concentrations(:)
     integer, pointer, intent(in) :: group(:,:)
     integer, optional, intent(inout) :: polynomials(size(group,1), size(group,2))
@@ -487,7 +488,7 @@ contains
     !!as the one for the current group operation.</local>
     !!<parameter name="pused">The number of unique Product instances created so far.</parameter>
     integer :: cursor(1), vindex(1), powers
-    integer :: i, j, m, mindex, dupindex, pused = 0, b =0, d = 1
+    integer :: i, j, m, mindex, dupindex, pused = 0
     logical :: ldecomp
 
     !This checks that the specified concentration matches the number of sites the group is 
