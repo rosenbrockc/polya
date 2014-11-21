@@ -4,7 +4,7 @@
     <group name="coefficient_tests" purpose="testing">
       <test identifier="standard" description="Same tests used for the
 					       python unit tests."
-	    timed="true" cases="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg7,fg8,fc1,fc2,fc3,fc4,fc5">
+	    timed="true" cases="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg7,fg8,fc1,fc2,fc3,fc4,fc5,cr1,cr2,cr3,cr4,cr5,cr6,cr7,cr8,cr9">
 	<output identifier="result.out" folder="./tests" file="result.out.{}" 
 		template="integer.xml" />
 	<target name="[default]" compareto="result.out" varfile="polya.out" when="each" />
@@ -67,7 +67,7 @@
     <group name="init_group" purpose="testing">
       <test identifier="product_init" 
 	    description="Check initialization of the product class"
-	    timed="true" cases="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg7,fg8,fc1,fc2,fc3,fc4,fc5">
+	    timed="true" cases="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg7,fg8,fc1,fc2,fc3,fc4,fc5,cr1,cr2,cr3,cr4,cr5,cr6,cr7,cr8,cr9">
 	<output identifier="constant" value="1" />
 	<target name="coefficient" compareto="constant" varfile="coefficient.out" when="each" />
       </test>
@@ -89,7 +89,7 @@
     <group name="init_group" purpose="testing">
       <test identifier="seq_init" 
 	    description="Test recursive initialization of exponent sequences"
-	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5">
+	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5,cr1,cr2,cr4,cr5,cr6,cr7,cr8,cr9">
 	<output identifier="kidcount.out" folder="./tests" file="kidcount.0.out.{}" 
 		template="integer.xml" />
 	<target name="this" member="kidcount" compareto="kidcount.out" varfile="kidcount.out" when="each" />
@@ -139,7 +139,7 @@
     <group name="expand_group" purpose="testing">
       <test identifier="expansion" 
 	    description="Test recursive expansion of exponent sequences"
-	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5">
+	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5,cr1,cr2,cr4,cr5,cr6,cr7,cr8,cr9">
 	<output identifier="seqexp.out" folder="./tests" file="seqexp.0.out.{}" 
 		template="integer.xml" />
 	<target name="sequences" compareto="seqexp.out" varfile="seqexp.out" when="each" />
@@ -157,7 +157,7 @@
     <group name="sum_group" purpose="testing">
       <test identifier="sum_seq" 
 	    description="Test summing of cartesian product of exponent sequences"
-	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5" >
+	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5,cr1,cr2,cr4,cr5,cr6,cr7,cr8,cr9" >
 	<output identifier="sum_seq.out" folder="./tests" file="sum_seq.out.{}" 
 		template="integer.xml" />
 	<target name="[default]" compareto="sum_seq.out" varfile="sum_seq.out" when="each" />
@@ -182,7 +182,7 @@
     <group name="coeff_group" purpose="testing">
       <test identifier="coeff" 
 	    description="Test coefficient calculation for a single product."
-	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5" >
+	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5,cr1,cr2,cr4,cr5,cr6,cr7,cr8,cr9" >
 	<output identifier="coeff.out" folder="./tests" file="coeffs.out.{}" 
 		template="integer.xml" />
 	<target name="[default]" compareto="coeff.out" varfile="coeff.out" when="each" />
