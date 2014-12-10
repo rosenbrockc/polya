@@ -358,7 +358,9 @@ def polya(concentrations, group, debug=False):
     if sum(concentrations) != len(group[1]):
         print("The concentrations don't sum to the number of things the group is acting on!")
         exit()
-        
+
+    if 0 not in group[0]:
+        group = [[j -1 for j in i] for i in group]
         
     polyndict = {}
     #The operations in the group are used to construct the unique polynomials for each operation.
