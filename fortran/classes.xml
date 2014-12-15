@@ -4,7 +4,7 @@
     <group name="coefficient_tests" purpose="testing">
       <test identifier="standard" description="Same tests used for the
 					       python unit tests."
-	    timed="true" cases="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg7,fg8,fc1,fc2,fc3,fc4,fc5,cr1,cr2,cr3,cr4,cr5,cr6,cr7,cr8,cr9">
+	    timed="true" cases="[0-21],fg[1-8],fc[1-5],cr[1-9]">
 	<output identifier="result.out" folder="./tests" file="result.out.{}" 
 		template="integer.xml" />
 	<target name="[default]" compareto="result.out" varfile="polya.out" when="each" />
