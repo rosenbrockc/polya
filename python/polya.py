@@ -383,6 +383,35 @@ def polya(concentrations, group, debug=False):
     rad = sum([p.coeff() for p in polyndict.values()])
     return int(rad/float(len(group)))             
 
+def _examples():
+    """Print some examples on how to use this python version of the code."""
+    helptext = ("For all the examples below, it is assumed that you know the fixed concentration "
+                "term T in advance. This term is the first, *positional* argument to the script. "
+                "In addition to the term T, you need to specify the group operations as permutation "
+                "lists. They can be either zero- or one-based. Group operations can be specified "
+                "with the group generators or as a 2D matrix with all the group operations; if the "
+                "lists of values were saved directly from python using a __repr__ or __str__ then "
+                "use the '-parse' argument to specify that.")
+    egs = [("Find the Polya Coefficient with Group Generators",
+            "The code below finds the number of unique ways to color a square with 4 corners using "
+            "2 different colors such that there are 2 corners with each color. "
+            "The group is specified using generators in a file called 'generators.in.paper'. The "
+            "contents of the generators file are:\n  4 3 2 1\n  2 3 4 1\nand are the generators "
+            "for the dihedral group of degree 4.", "./polya.py 2 2 -generators generators.in.paper"),
+           ("Find the Polya Coefficient with an Entire Group",
+            "This code also finds the coefficient, but for a larger group with 144 operations acting "
+            "on a finite set with 20 elements. The term T is specified as [4,4,4,2,2,2,2] so that we "
+            "want 4 of the first 3 colors and 2 of the last 4 colors with 7, the total number of "
+            "colors in the enumeration. The group file 'group.out.cr6' can be viewed in the repo at "
+            "'polya/fortran/tests/'.", "./polya.py 4 4 4 2 2 2 2 -group group.out.cr6")]
+
+    print("POLYA ENUMERATION THEOREM SOLVER\n")
+    for eg in egs:
+        title, desc, code = eg
+        print("--" + title + '--\n')
+        print(desc + '\n')
+        print('  ' + code + '\n')
+
 def _parser_options():
     """Parses the options and arguments from the command line."""
     import argparse
@@ -399,12 +428,19 @@ def _parser_options():
                               "\tsuch as a list, and is interpreted using eval(). \n"
                               "- 'text': text values are split on whitespace and converted to \n"
                               "\tintegers. One group operation/generator per line."))
-    parser.add_argument("concentrations", type=int, nargs="+",
+    parser.add_argument("concentrations", type=int, nargs="*", default=[0],
                         help=("The number of each type of coloring in the concentration restricted "
                               "enumeration on a lattice."))
     parser.add_argument("-debug", action="store_true",
                         help="Print verbose polya polynomial information for debugging.")
-    return vars(parser.parse_args())
+    parser.add_argument("-examples", action="store_true",
+                        help="Print some examples for how to use the Polya solver.")
+
+    vardict = vars(parser.parse_args())
+    if vardict["examples"]:
+        _examples()
+        exit(0)
+    return vardict
 
 def _read_file(args, filepath):
     """Parses the contents of the specified file using the 'parse' arguments from script args."""
