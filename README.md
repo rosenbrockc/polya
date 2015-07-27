@@ -9,7 +9,20 @@ This repository has code in both Python and Fortran for counting the number of u
 Quickstart
 ------
 
-To get started quickly, clone the git repo: `git clone https://github.com/rosenbrockc/polya.git`. This will create a folder called `polya` in the current directory. Next, `cd polya/python` and execute the script `polya.py`. The script is documented internally with examples and a description of the parameters; we won't duplicate that information here.
+To get started quickly, clone the git repo: `git clone https://github.com/rosenbrockc/polya.git`. This will create a folder called `polya` in the current directory. Next, `cd polya/python` and execute the script `polya.py`. The script is documented internally with examples and a description of the parameters (by running `./polya.py --help`). We proceed with a short example using the symmetries of the square. It is also the example discussed in the [paper](https://github.com/rosenbrockc/polya/blob/master/docs/polyaenum.pdf).
+
+The generators of the dihedral group of degree four are written in cycle form as:
+
+```
+4 3 2 1
+2 3 4 1
+```
+
+A file containing these generators is included in `fortran/tests/generators.in.paper`. If we want to know how many ways exist to color the corners of the square with 2 colors and two corners of each color, then the positional argument is `2 2` (just list the number of corners that should have each type of color; the number of entries is the number of colors to use). We can then calculate the number of unique colorings using:
+
+```
+./polya.py 2 2 -generators generators.in.paper
+```
 
 Unit Tests
 ------
