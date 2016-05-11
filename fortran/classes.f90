@@ -32,7 +32,7 @@ public polya, lint
   end type Sequence
 
   !!<summary>Represents a multinomial expansion.</summary>
-  type Multinomial 
+  type, public :: Multinomial 
      !!<member name="pawer">the powers on each of the *unexpanded* variables in the multinomial;
      !!of the form (x^2+y^2+z^2) => 2. No support is provided for coefficients on the
      !!variables inside the brackets (only Polya implementation).</member>
@@ -49,7 +49,7 @@ public polya, lint
   end type Multinomial
 
   !!<summary>Represents a product of multinomials for which only a single term is interesting.</summary>
-  type Product
+  type, public :: Product
      !!<member name="coefficient">The scalar integer multiplying this product of multinomials.</member>
      !!<member name="targets">a list of exponents for the only interesting term in the product. The
      !!list is in the order that the variables appear in each multinomial.</member>
@@ -399,7 +399,7 @@ contains
 
   !!<summary>Returns the number of different ways to partition an n-element
   !!set into disjoint subsets of sizes k1, ..., km.</summary>
-  !!<parameter name="sequencei">an un-normed tuple of form (k1, k2, k3)."</parameter>
+  !!<parameter name="sequencei">an un-normed tuple of form (k1, k2, k3).</parameter>
   integer(lint) function nchoosekm(this, sequencei)
     class(Multinomial), intent(in) :: this
     integer, intent(in) :: sequencei(:)
@@ -423,6 +423,8 @@ contains
   !!or Iteration?" by Yannis Manolopoulos, ACM SIGCSE Bulletin InRoads, Vol.34, No.4, 
   !!December 2002. http://delab.csd.auth.gr/papers/SBI02m.pdf It is supposed to be robust 
   !!against large, intermediate values and to have optimal complexity.</summary>
+  !!<parameter name="n" regular="true"></parameter>
+  !!<parameter name="k" regular="true"></parameter>
   function nchoosek(n,k)
     integer(lint) :: nchoosek
     integer, intent(in) :: n, k

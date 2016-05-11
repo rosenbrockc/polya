@@ -16,9 +16,7 @@
 	<value identifier="group_ops" folder="./tests"
 	       file="group.out.{}" rename="group.in" />
       </assignment>
-      <assignment name="group" value="group_plusone">
-	<value identifier="group_plusone" constant="group+1" />
-      </assignment>
+      <assignment name="group" constant="group+1" />
       <assignment name="polynomials" 
 		  allocate="size(group, 1), size(group,2)" />
       <assignment name="decompose" value="const">
@@ -182,7 +180,7 @@
 	       paramlist="@file,alloc=.true." filedim="2" />
 	<part identifier="arrpart" value="initfun" limits="1:mnseq_len" />
       </assignment>
-      <prereq method="classes.product_initialize" />
+      <prereq method="classes.product_initialize" chainto="product_init" />
     </group>
   </decorates>
 
@@ -195,7 +193,7 @@
 		template="integer.xml" />
 	<target name="[default]" compareto="coeff.out" varfile="coeff.out" when="each" />
       </test>
-      <prereq method="classes.product_initialize" />
+      <prereq method="classes.product_initialize" chainto="product_init" />
     </group>
   </decorates>
 </fortpy>

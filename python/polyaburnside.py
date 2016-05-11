@@ -1,22 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-AUTHORS: Conrad W. Rosenbrock, Wiley S. Morgan (October 2014)
+AUTHORS: Conrad W. Rosenbrock, Wiley S. Morgan (June 2015)
 
 Classes to support the calculation of coefficients for specific terms in a product
 of multinomials. Construct a product class by specifying the exponent and target term
 and then add multinomials using the Product instance's append(). The coefficient is
 then available from the coeff().
-
-EXAMPLE: find the coefficient of x^4.y^4.z^4 in 3*(x+y+z)^3*(x^2+y^2+z^2)^3*(x^3+y^3+z^3).
-ANSWER: 162 from Mathematica
-
->> p = Product(3, [4,4,4])
->> p.append(Multinomial(1,3))
->> p.append(Multinomial(2,3))
->> p.append(Multinomial(3,1))
->> print(p.coeff())
-162
 """
 class Sequence(object):
     """Represents an exponent-limited sequence with a single root. Here, sequence represents a
@@ -191,14 +181,19 @@ class Product(object):
 
 class Multinomial(object):
     """Represents a multinomial expansion."""
-    def __init__(self, power, exponent=1):
+    def __init__(self, power, coeff, arrowings, exponent=1):
         """Sets up the multinomial.
 
         :arg powers: the power on each of the *unexpanded* variables in the multinomial;
           of the form (x^2+y^2+z^2) => 2.
+        :arg coeff: the coefficient on each of the variables in the multinomial; e.g.
+          (x^2 + a y^2) => a. For more than two variables, each color that *has* arrowing
+          gets the coefficient while the others get 1.
         :arg exponent: the exponent of the entire multinomial.
         """
         self.power = power
+        self.coeff = coeff
+        self.arrowings = arrowings
         self.exponent = exponent
         self.powersum = power*exponent
         """Returns the integer value that all term exponents in the multinomial should
@@ -210,8 +205,8 @@ class Multinomial(object):
     def __str__(self):
         #We want to print the multinomial out in a nice, readable way, similar to how
         #they are presented in Mathematica.
-        #contents = ' + '.join(["{}".format(p) for p in self.powers])
-        return "({})^{}".format(self.power, self.exponent)
+        contents = ' + '.join(["{}^{}".format(self.coeff if a else 1, self.power) for a in self.arrowings])
+        return "({})^{}".format(contents, self.exponent)
 
     def normed_seq(self, seq):
         """Normalizes the specified sequence using the powers of unexpanded terms in the multinomial.
@@ -230,12 +225,20 @@ class Multinomial(object):
         if not all([seq%self.power == 0 for seq in sequence]):
             return 0
         else:
+            from operator import mul
             normseq = self.normed_seq(sequence)
             for i in range(len(sequence)):
                 nsum = sum(normseq[0:i+1])
                 prod *= Multinomial.nchoosek(nsum, normseq[i])
 
-            return prod
+            #Add the contribution from the coefficients of the variable *inside*
+            #the multionomial.
+            pcoeff = 1
+            for iseq, arrow in enumerate(self.arrowings):
+                if arrow:
+                    pcoeff *= self.coeff**normseq[iseq]
+                
+            return prod*pcoeff
         
     @staticmethod
     def nchoosek(n, k):
@@ -305,46 +308,81 @@ def _group_to_cyclic(group, limit=None):
     """Determines the degeneracy of each r-cycle in the specified group operations."""
     result = []
     #We allow filtering so that the unit testing can access the cyclic form of the group.
+    if 0 not in group[0][0]:
+        group = [[[j - 1 for j in i] for i in t] for t in group]
+    
     if limit is not None:
         filtered = group[limit[0]:limit[1]]
     else:
         filtered = group
 
     for operation in filtered:
-        #visited has the same # of elements as the group operation and is used to make sure each
-        #element in the array is visited as we loop through in a *non-sequential* order.
-        visited = [0]*len(operation)
+        #visitedp has the same # of elements as the site group operation and
+        #is used to make sure each element in the array is visited as
+        #we loop through in a *non-sequential* order.
+        #visitedc has the same number of elements as the arrow group
+        #opertaion and is used to make sure each element of that array
+        #is visited as we loop through it in a "non-sequential" order.
+        visitedp = [0]*len(operation[0])
+        visitedc = [0]*len(operation[1])
         polynomials = {}
 
-        while 0 in visited:
-            #Start with the first element in the group that hasn't been visited yet. The first
-            #non-trivial polynomials have powers > 0.
-            cursor = vindex = visited.index(0)
+        arrow_cycle_len = []
+        #We start by finding the cylce lengths of the arrow group
+        #operations so that we can later see how many of them are
+        #divosors of the site group operations.
+        while 0 in visitedc:
+            #Start with the first elemenet in the arrow group that
+            #hasn't been visited yet. All cycles have length > 0.
+            cursor = vindex = visitedc.index(0)
+            cyc_len = 1
+            visitedc[cursor] = 1
+            cursor = operation[1][cursor]
+            while cursor != vindex:
+                visitedc[cursor] = 1
+                cyc_len += 1
+                cursor = operation[1][cursor]
+            arrow_cycle_len.append(cyc_len)
+
+        while 0 in visitedp:
+            #Start with the first element in the site group that hasn't
+            #been visited yet. The first non-trivial polynomials have
+            #powers > 0.
+            cursor = vindex = visitedp.index(0)
             powers = 1 
             #change the current position to having been visited; move the cursor.
-            visited[cursor] = 1
-            cursor = operation[cursor]
-
-            #The power of the variables in the polynomials is equal to the number of group operations
-            #separating the cursor's current position from its *value* in the group operations list.
+            visitedp[cursor] = 1
+            cursor = operation[0][cursor]
+            #The power of the variables in the polynomials is equal to
+            #the number of group operations separating the cursor's
+            #current position from its *value* in the group operations
+            #list.
             while cursor != vindex:
-                visited[cursor] = 1
+                visitedp[cursor] = 1
                 powers += 1
-                cursor = operation[cursor]
+                cursor = operation[0][cursor]
+            #We now have everything need to construct part of the
+            #polynomial. This is done by taking powers and using it to
+            #construct an array of length equal to the number of
+            #elements in the system each entry in the array is set to
+            #be equal to powers.
 
-            #We now have everything need to construct part of the polynomial. This is done by taking powers
-            #and using it to construct an array of length equal to the number of elements in the system 
-            #each entry in the array is set to be equal to powers.
-            if powers not in polynomials:
-                polynomials[powers] = 1
+            #To get the coefficients right we need to see how many of
+            #the arrow cycles are divisors in length of the current
+            #cycle.
+            coef = sum([l for l in arrow_cycle_len if powers%l == 0])
+
+            polykey = (powers, coef)
+            if polykey not in polynomials:
+                polynomials[polykey] = 1
             else:
-                polynomials[powers] += 1
+                polynomials[polykey] += 1
 
         result.append(polynomials)
-
+        
     return result
 
-def polya(concentrations, group, debug=False):
+def polya(concentrations, group, arrowings, debug=False):
     """Uses a group and concentrations to find the number of unique arrangements as described by 
     polya.
     
@@ -352,23 +390,27 @@ def polya(concentrations, group, debug=False):
       be present in each of the enumerated lists.
     :arg group: group operations for permuting the colorings.
     """
-
+    if isinstance(arrowings, int):
+        arrowings = [False]*(len(concentrations)-arrowings) + [True]*arrowings
+    
     #This is to check that the concentrations sum to the number of sites the group is
     #operating on
-    if sum(concentrations) != len(group[1]):
+    if sum(concentrations) != len(group[0][0]):
         print("The concentrations don't sum to the number of things the group is acting on!")
         exit()
 
-    if 0 not in group[0]:
-        group = [[j -1 for j in i] for i in group]
+    for k in range(2):
+        for g in range(len(group)):
+            if 0 not in group[0][k]:
+                group[g][k] = [j-1 for j in group[g][k]]
         
     polyndict = {}
     #The operations in the group are used to construct the unique polynomials for each operation.
     for polynomials in _group_to_cyclic(group):
         #Construct a product of multinomials for this group operation.
         p = Product(1,concentrations)
-        for exp in polynomials:
-            p.multinoms.append(Multinomial(exp, polynomials[exp]))
+        for exp, coeff in polynomials:
+            p.multinoms.append(Multinomial(exp, coeff, arrowings, polynomials[(exp, coeff)]))
 
         key = str(p)
         if key not in polyndict:
@@ -412,7 +454,7 @@ def _examples():
         print(desc + '\n')
         print('  ' + code + '\n')
 
-def _parser_options(phelp=False):
+def _parser_options():
     """Parses the options and arguments from the command line."""
     import argparse
     parser = argparse.ArgumentParser(description="Polya Coefficient Calculator")
@@ -437,7 +479,7 @@ def _parser_options(phelp=False):
                         help="Print some examples for how to use the Polya solver.")
 
     vardict = vars(parser.parse_args())
-    if phelp or vardict["examples"]:
+    if vardict["examples"]:
         _examples()
         exit(0)
     return vardict
@@ -460,7 +502,7 @@ def script_polya(args):
     subject to a set of symmetry operations.
     """
     if not args["generators"] and not args["group"]:
-        _parser_options(True)
+        raise ValueError("You must specify either the generators or the group.")
 
     if args["generators"]:
         gens = _read_file(args, args["generators"])
@@ -472,5 +514,5 @@ def script_polya(args):
     print(coeff)
     return coeff
 
-if __name__ == '__main__':
-    script_polya(_parser_options())
+# if __name__ == '__main__':
+#     script_polya(_parser_options())
