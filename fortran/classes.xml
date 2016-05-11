@@ -4,7 +4,8 @@
     <group name="coefficient_tests" purpose="testing">
       <test identifier="standard" description="Same tests used for the
 					       python unit tests."
-	    timed="true" cases="[0-21],fg[1-8],fc[1-5],cr[1-9]">
+	    timed="true" cases="[0-21],fg[1-8],fc[1-5],cr[1-9],sc_16_[1-5],
+				sc_24_[1-5],sc_32_[1-6],sc_48_[1-5],sc_60_[1-4]">
 	<output identifier="result.out" folder="./tests" file="result.out.{}" 
 		template="integer.xml" />
 	<target name="[default]" compareto="result.out" varfile="polya.out" when="each" />
@@ -29,8 +30,9 @@
       </assignment>
     </group>
   </decorates>
+
   <decorates name="classes.nchoosekm">
-    <group name="multinomial_tests" purpose="testing">
+    <group name="multinomial_tests" purpose="testingf">
       <test identifier="Manolopoulos" description="Multinomial with
 						   Binomials Testing"
 	    timed="true" >
@@ -49,8 +51,9 @@
       </assignment>
     </group>
   </decorates>
+
   <decorates name="classes.nchoosek">
-    <group name="binomial_tests" purpose="testing">
+    <group name="binomial_tests" purpose="testingf">
       <test identifier="Manolopoulos" description="Yannis Manolopoulos
 						   binomial function testing"
 	    timed="true" >
@@ -63,8 +66,9 @@
       </test>
     </group>
   </decorates>
+
   <decorates name="classes.product_initialize">
-    <group name="init_group" purpose="testing">
+    <group name="init_group" purpose="testingf">
       <test identifier="product_init" 
 	    description="Check initialization of the product class"
 	    timed="true" cases="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg7,fg8,fc1,fc2,fc3,fc4,fc5,cr1,cr2,cr3,cr4,cr5,cr6,cr7,cr8,cr9">
@@ -85,8 +89,9 @@
       <assignment name="this" allocate="true" />
     </group>
   </decorates>
+
   <decorates name="classes.sequence_initialize">
-    <group name="init_group" purpose="testing">
+    <group name="init_group" purpose="testingf">
       <test identifier="seq_init" 
 	    description="Test recursive initialization of exponent sequences"
 	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5,cr1,cr2,cr4,cr5,cr6,cr7,cr8,cr9">
@@ -135,8 +140,9 @@
       <assignment name="this" allocate="true" />
     </group>
   </decorates>
+
   <decorates name="classes.expand">
-    <group name="expand_group" purpose="testing">
+    <group name="expand_group" purpose="testingf">
       <test identifier="expansion" 
 	    description="Test recursive expansion of exponent sequences"
 	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5,cr1,cr2,cr4,cr5,cr6,cr7,cr8,cr9">
@@ -153,8 +159,9 @@
       <prereq method="classes.sequence_initialize" />
     </group>
   </decorates>
+
   <decorates name="classes.sum_sequence">
-    <group name="sum_group" purpose="testing">
+    <group name="sum_group" purpose="testingf">
       <test identifier="sum_seq" 
 	    description="Test summing of cartesian product of exponent sequences"
 	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5,cr1,cr2,cr4,cr5,cr6,cr7,cr8,cr9" >
@@ -178,8 +185,9 @@
       <prereq method="classes.product_initialize" />
     </group>
   </decorates>
+
   <decorates name="classes.coeff">
-    <group name="coeff_group" purpose="testing">
+    <group name="coeff_group" purpose="testingf">
       <test identifier="coeff" 
 	    description="Test coefficient calculation for a single product."
 	    timed="true" cases="1,2,3,4,7,8,9,10,11,14,15,18,19,20,21,fg1,fg2,fg3,fg4,fg5,fg6,fg8,fc3,fc5,cr1,cr2,cr4,cr5,cr6,cr7,cr8,cr9" >
