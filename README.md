@@ -4,7 +4,7 @@ POLYA
 Numerical Implementation of the Polya Enumeration Theorem
 ------
 
-This repository has code in both Python and Fortran for counting the number of unique colorings of a finite set under the action of a finite group. An example of the theorem and its application are discussed in the [paper](https://github.com/rosenbrockc/polya/blob/master/docs/polyaenum.pdf), as well as a description of the algorithm being used.
+This repository has code in both Python and Fortran for counting the number of unique colorings of a finite set under the action of a finite group. An example of the theorem and its application are discussed in the [paper](https://github.com/rosenbrockc/polya/blob/master/docs/polyaenum.pdf), as well as a description of the algorithm being used. Details needed to reproduce the data in the paper's figures is included in [FIGURES.md](FIGURES.md).
 
 Quickstart
 ------

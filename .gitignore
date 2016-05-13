@@ -9,6 +9,8 @@ tests/staging/
 
 # C extensions
 *.so
+*.mod
+*.o
 
 # Distribution / packaging
 .Python
