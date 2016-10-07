@@ -493,6 +493,7 @@ contains
     integer :: i, j, m, mindex, dupindex, pused = 0
     logical :: ldecomp
 
+    pused = 0
     !This checks that the specified concentration matches the number of sites the group is 
     !acting on.
     if (sum(concentrations) .ne. size(group,2)) then
