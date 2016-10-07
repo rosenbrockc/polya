@@ -230,6 +230,7 @@ contains
     integer :: i
 
     this%coefficient = coefficient
+    if (.not. allocated(this%targets)) allocate(this%targets(size(targets)))
     this%targets = targets
     allocate(this%multinoms(size(multinomials,1)))
     do i=1, size(multinomials,1)
@@ -391,9 +392,11 @@ contains
     integer, intent(in) :: exponent, power
     integer :: j
 
+    if (.not. allocated(this%power)) allocate(this%power)
     this%power = power
     this%exponent = exponent
     this%powersum = power*exponent
+    if (.not. allocated(this%possible_powers)) allocate(this%possible_powers(exponent+1))
     this%possible_powers = (/(j,j=0,power*exponent,power)/)
   end subroutine multinomial_initialize
 

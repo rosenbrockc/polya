@@ -1,7 +1,9 @@
 # Revision History for "polya"
 
-## Revisions 0.0.1
+## Revision 0.0.2
+- Fixed a bug that occured in the ifort 
 
+## Revisions 0.0.1
 - Added a Makefile for the fortran code that compiles a library for
   ease of use of the code in other packages.
 
