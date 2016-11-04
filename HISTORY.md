@@ -1,7 +1,10 @@
 # Revision History for "polya"
 
+## Revision 0.1.0
+- Implemented Burnsides lemma so that "arrows" can be included in the final count.
+
 ## Revision 0.0.2
-- Fixed a bug that occured in the ifort 
+- Fixed a bug that occured when using the ifort compiler.
 
 ## Revisions 0.0.1
 - Added a Makefile for the fortran code that compiles a library for

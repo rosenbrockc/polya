@@ -8,20 +8,27 @@ MODULE classes
 use itertools
 IMPLICIT NONE
 public polya, lint
+
   !!<summary>Big integer -10^18..10^18 range</summary>
   integer, parameter:: lint=selected_int_kind(18)
-  !!<summary>Represents an exponent-limited sequence with a single root. Here, sequence represents a
-  !!sequence of integer values k_1, k_2...k_j that are the exponents of a single term in a multinomial.
-  !!The root of the sequence is one of the k_i; its children become sets of sequences including
-  !!variables to the right of i</summary>
+  !!<summary>Represents an exponent-limited sequence with a single
+  !!root. Here, sequence represents a sequence of integer values k_1,
+  !!k_2...k_j that are the exponents of a single term in a
+  !!multinomial.  The root of the sequence is one of the k_i; its
+  !!children become sets of sequences including variables to the right
+  !!of i</summary>
   type, public :: Sequence
-     !!<member name="root">The exponent of the variable to the left in the multinomial term.</member>
-     !!<member name="parent">A Sequence instance for the variable to the *left* of this one 
-     !!(i.e. has index i-1).</member>
-     !!<member name="varcount">The number of variables in the multinomial (also length of targets).</member>
+     !!<member name="root">The exponent of the variable to the left in
+     !!the multinomial term.</member>
+     !!<member name="parent">A Sequence instance for the variable to
+     !!the *left* of this one (i.e. has index i-1).</member>
+     !!<member name="varcount">The number of variables in the
+     !!multinomial (also length of targets).</member>
      !!<member name="kids"></member>
-     !!<member name="used">The sum of exponents to the left of this variable sequence.</member>
-     !!<member name="kidcount">The number of child sequences to the right of this sequence.</member>
+     !!<member name="used">The sum of exponents to the left of this
+     !!variable sequence.</member>
+     !!<member name="kidcount">The number of child sequences to the
+     !!right of this sequence.</member>
      integer :: root, used, varcount, kidcount
      class(Sequence), pointer :: parent => null()
      class(Sequence), pointer :: kids(:)
@@ -32,30 +39,44 @@ public polya, lint
   end type Sequence
 
   !!<summary>Represents a multinomial expansion.</summary>
-  type, public :: Multinomial 
-     !!<member name="pawer">the powers on each of the *unexpanded* variables in the multinomial;
-     !!of the form (x^2+y^2+z^2) => 2. No support is provided for coefficients on the
-     !!variables inside the brackets (only Polya implementation).</member>
-     !!<member name="exponent">the exponent of the entire multinomial.</member>
-     !!<member name="powersum">The maximum allowed exponent on any term in the expansion.</member>
-     !!<member name="possible_powers">The list of possible exponents a single variable can have in
-     !!any of the terms in the expansion.</member>
+  type Multinomial 
+     !!<member name="pawer">the powers on each of the *unexpanded*
+     !!variables in the multinomial; of the form (x^2+y^2+z^2) =>
+     !!2. No support is provided for coefficients on the variables
+     !!inside the brackets (only Polya implementation).</member>
+     !!<member name="exponent">the exponent of the entire
+     !!multinomial.</member>
+     !!<member name="powersum">The maximum allowed exponent on any
+     !!term in the expansion.</member>
+     !!<member name="possible_powers">The list of possible exponents a
+     !!single variable can have in any of the terms in the
+     !!expansion.</member>
+     !!<member name="arrowings">A 1D array of logicals that indicates
+     !!where the arrows are in the concentration list.</member>
+     logical, allocatable :: arrowings(:)
      integer, allocatable :: power
-     integer :: exponent, powersum
+     integer :: exponent, powersum, coeff
      integer, allocatable :: possible_powers(:)
      contains
        procedure, public :: initialize => multinomial_initialize
        procedure, public :: nchoosekm
   end type Multinomial
 
-  !!<summary>Represents a product of multinomials for which only a single term is interesting.</summary>
-  type, public :: Product
-     !!<member name="coefficient">The scalar integer multiplying this product of multinomials.</member>
-     !!<member name="targets">a list of exponents for the only interesting term in the product. The
-     !!list is in the order that the variables appear in each multinomial.</member>
-     !!<member name="multinoms">An array containing the multinomials.</member>   
-     !!<member name="multinom_rd">A 2D array of the r-cycle and degeneracy values that define each
-     !!multinomial.</member>
+  !!<summary>Represents a product of multinomials for which only a
+  !!single term is interesting.</summary>
+  type Product
+     !!<member name="coefficient">The scalar integer multiplying this
+     !!product of multinomials.</member>
+     !!<member name="targets">a list of exponents for the only
+     !!interesting term in the product. The list is in the order that
+     !!the variables appear in each multinomial.</member>
+     !!<member name="multinoms">An array containing the
+     !!multinomials.</member>
+     !!<member name="multinom_rd">A 2D array of the r-cycle and
+     !!degeneracy values that define each multinomial.</member>
+     !!<member name="arrowings">A 1D array of logicals that indicates
+     !!where the arrows are in the concentration list.</member>
+     logical, allocatable :: arrowings(:)
      integer :: coefficient
      integer, allocatable :: targets(:)
      class(Multinomial), allocatable :: multinoms(:)
@@ -67,19 +88,23 @@ public polya, lint
   end type Product
 
 contains
-  !!<summary>Initializes a sequence collector for a variable. 'Term' refers to a product
-  !!of variables like x^i.y^j.z^k, then x has index 0, y has 1, etc.</summary>
-  !!<parameter name="root" regular="true">The exponent of the variable to the left 
-  !!in the multinomial term.</parameter>
-  !!<parameter name="possibles" regular="true">A list of possible values for each variable 
-  !!in the multinomial.</parameter>
-  !!<parameter name="depth" regular="true">The index of the variable being sequenced in 
-  !!the term. Should be set to \emph{2} for the top level.</parameter>
-  !!<parameter name="powersum" regular="true">The maximum value that the sum of exponents in the sequence 
-  !!is allowed to have.</parameter>
-  !!<parameter name="targets" regular="true">An array of the target exponents on each variable.</parameter>
-  !!<parameter name="parent">A Sequence instance for the variable to the *left* of this one 
-  !!(i.e. has index i-1).</parameter>
+  !!<summary>Initializes a sequence collector for a variable. 'Term'
+  !!refers to a product of variables like x^i.y^j.z^k, then x has
+  !!index 0, y has 1, etc.</summary>
+  !!<parameter name="root" regular="true">The exponent of the variable
+  !!to the left in the multinomial term.</parameter>
+  !!<parameter name="possibles" regular="true">A list of possible
+  !!values for each variable in the multinomial.</parameter>
+  !!<parameter name="depth" regular="true">The index of the variable
+  !!being sequenced in the term. Should be set to \emph{2} for the top
+  !!level.</parameter>
+  !!<parameter name="powersum" regular="true">The maximum value that
+  !!the sum of exponents in the sequence is allowed to
+  !!have.</parameter>
+  !!<parameter name="targets" regular="true">An array of the target
+  !!exponents on each variable.</parameter>
+  !!<parameter name="parent">A Sequence instance for the variable to
+  !!the *left* of this one (i.e. has index i-1).</parameter>
   recursive subroutine sequence_initialize(this, root, possibles, depth, powersum, targets, parent)
     class(Sequence) :: this
     integer, intent(in) :: powersum, root, depth
@@ -87,11 +112,13 @@ contains
     integer, intent(in) :: possibles(:)
     class(Sequence), target, optional :: parent
     
-    !!<local name="kidroots">An array of the exponents af the children, ie the possibles-root 
-    !!that still meet the conditions</local>
-    !!<local name="kidcount">The number of kids that each depth has to its right.</local>
-    !!<local name="p">Temporary variable for analyzing each possible exponent for the
-    !!variable at the current depth.</local>
+    !!<local name="kidroots">An array of the exponents af the
+    !!children, ie the possibles-root that still meet the
+    !!conditions</local>
+    !!<local name="kidcount">The number of kids that each depth has to
+    !!its right.</local>
+    !!<local name="p">Temporary variable for analyzing each possible
+    !!exponent for the variable at the current depth.</local>
     integer, allocatable :: kidroots(:)
     integer :: i, p, kidcount
 
@@ -146,30 +173,39 @@ contains
     end if
   end subroutine sequence_initialize
   
-  !!<summary>Cleans up the local variables so that @CREF[this.initialize()] can be called on the
-  !!*same* instance that is already allocated.</summary>
+  !!<summary>Cleans up the local variables so that
+  !!@CREF[this.initialize()] can be called on the *same* instance that
+  !!is already allocated.</summary>
   subroutine sequence_finalize(this)
     class(Sequence) :: this
-    deallocate(this%kids)
+    if (associated(this%kids)) then
+       deallocate(this%kids)
+    end if
   end subroutine sequence_finalize
 
-  !!<summary>Recursively generates a list of all relevant sequences for this multinomial term.</summary>
-  !!<parameter name="sequences" regular="true">The result of the expansion; is allocated 
-  !!within this routine. Returns an array with dimensions (sum(allkids), varcount).</parameter>
-  !!<parameter name="pstart" regular="true">The row in 'sequences' to start filling in during the current 
-  !!recursion. Should be 1 for the top level.</parameter>
-  !!<parameter name="varindex" regular="true">The index of the variable in the polynomials. Should be 1
-  !!for the top level.</parameter>
+  !!<summary>Recursively generates a list of all relevant sequences
+  !!for this multinomial term.</summary>
+  !!<parameter name="sequences" regular="true">The result of the
+  !!expansion; is allocated within this routine. Returns an array with
+  !!dimensions (sum(allkids), varcount).</parameter>
+  !!<parameter name="pstart" regular="true">The row in 'sequences' to
+  !!start filling in during the current recursion. Should be 1 for the
+  !!top level.</parameter>
+  !!<parameter name="varindex" regular="true">The index of the
+  !!variable in the polynomials. Should be 1 for the top
+  !!level.</parameter>
   recursive subroutine expand(this, sequences, pstart, varindex)
     class(Sequence) :: this 
     integer, intent(inout), allocatable :: sequences(:,:)
     integer, intent(in) :: pstart, varindex
 
-    !!<local name="j,k">Iterators for the current sequences kids and the kids' variables
-    !!respectively during this level of expansion.</local>
-    !!<local name="cursor">Points to the current row in the 'sequences' result that is
-    !!having its value updated.</local>
-    !!<local name="start">Updatable copy of the 'pstart' parameter.</local>
+    !!<local name="j,k">Iterators for the current sequences kids and
+    !!the kids' variables respectively during this level of
+    !!expansion.</local>
+    !!<local name="cursor">Points to the current row in the
+    !!'sequences' result that is having its value updated.</local>
+    !!<local name="start">Updatable copy of the 'pstart'
+    !!parameter.</local>
     integer :: j, k, cursor
     integer :: start
 
@@ -214,99 +250,140 @@ contains
   end subroutine expand
 
   !!<summary>Initializes the empty product of multinomials.</summary>
-  !!<parameter name="coefficient" regular="true">The coefficient multiplying the product 
-  !!of multinomial.</parameter>
-  !!<parameter name="targets" regular="true">An array of specific exponents on the 
-  !!variables that will contribute to the number of unique colorings.</parameter>
-  !!<parameter name="multinomials" regular="true">A mx2 array defining the power and exponent 
-  !!of each multinomial in the product. Each row is a multinomial definition. DEALLOCATES 
-  !!this variable.</parameter>
-  subroutine product_initialize(this, coefficient, targets, multinomials)
+  !!<parameter name="coefficient" regular="true">The coefficient
+  !!multiplying the product of multinomial.</parameter>
+  !!<parameter name="targets" regular="true">An array of specific
+  !!exponents on the variables that will contribute to the number of
+  !!unique colorings.</parameter>
+  !!<parameter name="multinomials" regular="true">A mx2 array defining
+  !!the power and exponent of each multinomial in the product. Each
+  !!row is a multinomial definition. DEALLOCATES this
+  !!variable.</parameter>
+  !!<parameter name="arrowings" regular="true">A 1D array of logicals
+  !!that indicates where the arrows are in the concentrations
+  !!list.</parameter>
+  subroutine product_initialize(this, coefficient, targets, multinomials, arrowings)
     class(Product) :: this
     integer, intent(in) :: coefficient
     integer, allocatable, intent(in) :: targets(:)
     integer, allocatable, intent(inout) :: multinomials(:,:)
-
+    logical, intent(in) :: arrowings(:)
+    
     integer :: i
 
+    if (.not. allocated(this%arrowings)) allocate(this%arrowings(size(arrowings)))
+    this%arrowings = arrowings
     this%coefficient = coefficient
     if (.not. allocated(this%targets)) allocate(this%targets(size(targets)))
     this%targets = targets
     allocate(this%multinoms(size(multinomials,1)))
     do i=1, size(multinomials,1)
-       call this%multinoms(i)%initialize(multinomials(i,1), multinomials(i,2))
+       call this%multinoms(i)%initialize(multinomials(i,1), multinomials(i,2),&
+            multinomials(i,3),arrowings)
     end do
-
     !Change the multinomial array to be embedded inside of the product class.
     call move_alloc(multinomials, this%multinom_rd)
   end subroutine product_initialize
 
-  !!<summary>Returns the coefficient of the term with the target exponents if all the multinomials
-  !!in the product were expanded and had their terms collected.</summary>
+  !!<summary>Returns the coefficient of the term with the target
+  !!exponents if all the multinomials in the product were expanded and
+  !!had their terms collected.</summary>
   integer(lint) function coeff(this)
     class(Product), intent(in) :: this
 
     !!<local name="possibles">
     !!  <dimension index="1">Multinomials in the product.</dimension>
-    !!  <dimension index="2">Possible exponents for each of the variables in the multinomial.</dimension>
+    !!  <dimension index="2">Possible exponents for each of the
+    !!  variables in the multinomial.</dimension>
     !!  <summary>2D array of possible exponents.</summary>
     !!</local>
-    !!<local name="mnseq">An array of possible sequences for each multinomial. The 'mnseq' index
-    !!runs over the multinomials in the product. The 2D ragged-array in the instance has sequences
-    !!as rows and possible variable exponents as columns.</local>
-    !!<parameter name="varseq">The algorithm first looks at possible combinations of exponents on
-    !!the *first* variable. We then need to construct possible sequences for the remaining variables
-    !!in each multinomial. This variable is a temporary Sequence() instance for a single multinomial
-    !!which generates an expanded list of possible sequences for that multinomial. It gets cleaned
+    !!<local name="mnseq">An array of possible sequences for each
+    !!multinomial. The 'mnseq' index runs over the multinomials in the
+    !!product. The 2D ragged-array in the instance has sequences as
+    !!rows and possible variable exponents as columns.</local>
+    !!<parameter name="varseq">The algorithm first looks at possible
+    !!combinations of exponents on the *first* variable. We then need
+    !!to construct possible sequences for the remaining variables in
+    !!each multinomial. This variable is a temporary Sequence()
+    !!instance for a single multinomial which generates an expanded
+    !!list of possible sequences for that multinomial. It gets cleaned
     !!up after each multinomial.</parameter>
     class(vararray), allocatable :: possibles(:)
     class(vararray2d), allocatable, target :: mnseq(:)
     class(Sequence), pointer :: varseq
 
     integer :: i, j
-    !!<local name="seq0">Array of possible exponents on the *first* variable only. Each row
-    !!is a possible set of exponents; each column has the exponent on the *first* variable
-    !!for each multinomial in the product; i.e. there are size(this%multinoms) columns.</local>
-    !!<local name="expandedseq">Array of possible variable exponents for a *single* multinomial
-    !!in the product. Rows are possible sequences of exponents; columns have the exponent for each
-    !!variable in the polynomial; i.e. there are size(this%targets) columns.</local>
-    !!<local name="seq">Represents a single row in the 'seq0' array, which gets dealt with
-    !!one at a time.</local>
+    !!<local name="seq0">Array of possible exponents on the *first*
+    !!variable only. Each row is a possible set of exponents; each
+    !!column has the exponent on the *first* variable for each
+    !!multinomial in the product; i.e. there are size(this%multinoms)
+    !!columns.</local>
+    !!<local name="expandedseq">Array of possible variable exponents
+    !!for a *single* multinomial in the product. Rows are possible
+    !!sequences of exponents; columns have the exponent for each
+    !!variable in the polynomial; i.e. there are size(this%targets)
+    !!columns.</local>
+    !!<local name="seq">Represents a single row in the 'seq0' array,
+    !!which gets dealt with one at a time.</local>
     integer, allocatable :: seq0(:,:), expandedseq(:,:)
     integer :: seq(size(this%multinoms, 1))
+
+    integer :: n_arrows
+    integer, allocatable :: arrow_conc(:)
 
     allocate(possibles(size(this%multinoms,1)))
     allocate(mnseq(size(this%multinoms, 1)))
 
-    !If this is an isolated multinomial, we only need to check the coefficient of the target term.
+    !If this is an isolated multinomial, we only need to check the
+    !coefficient of the target term.
     if (size(this%multinoms,1) == 1) then
        if (all(this%multinoms(1)%power-this%targets .gt. 0)) then
           coeff = 0          
-       else 
-          coeff = this%multinoms(1)%nchoosekm(this%targets)*this%coefficient 
+       else
+          ! If there are no arrows in the system then we don't need to
+          ! change the calculation
+          if (all(this%arrowings .eqv. .False.)) then
+             coeff = this%multinoms(1)%nchoosekm(this%targets)*this%coefficient
+          else
+          ! If there are arrows then we need to multiply the coeff by
+          ! a factor related to the concentration of the arrows.
+             n_arrows = count(this%arrowings .eqv. .true.,1)
+             allocate(arrow_conc(n_arrows))
+             j = 1
+             do i = (size(this%targets)-n_arrows + 1), size(this%targets)
+                arrow_conc(j) = this%targets(i)
+                j = j +1
+             end do
+             coeff = this%multinoms(1)%nchoosekm(this%targets)*this%coefficient
+             do i = 1, size(arrow_conc)
+                coeff = coeff * this%multinoms(1)%coeff**arrow_conc(i)
+             end do
+          end if
        end if           
     end if
-
+    ! Deallocate arrow_conc since it is no longer needed.
+    if (allocated(arrow_conc)) then 
+       deallocate(arrow_conc)
+    end if
     !Get a list of the possible exponents for each variable in each of the multinomials.
     !We start with the first variable and choose only those combinations of exponents
     !across *all* the multinomials that give the correct target exponent for that variable.
     do i = 1, size(this%multinoms,1)
        call possibles(i)%init(this%multinoms(i)%possible_powers)
     end do
-
     call cproduct(possibles, seq0)
     !Next, we construct Sequence instances for each of the first variable compatible
     !possibilities and follow them through to the other variables.
     coeff = 0
     allocate(varseq)
-
     do i = 1, size(seq0,1)
        !Each sequence calculated from the first variable has an entry for each multinomial
        !in this product. The Sequence instances construct smart sequences for the remaining
        !variables in each multinomial separately.
        seq = seq0(i,:)
        do j = 1, size(seq,1)
-          call varseq%initialize(seq(j), possibles(j)%items, 2, this%multinoms(j)%powersum, this%targets)
+          call varseq%initialize(seq(j), possibles(j)%items, 2, this%multinoms(j)%powersum,&
+               this%targets)
           call varseq%expand(expandedseq, 1, 1)
           call mnseq(j)%init(expandedseq, alloc=.true.)
           !Clean up the varsequence and expanded sequence variable.
@@ -319,30 +396,34 @@ contains
           call mnseq(j)%finalize()
        end do
     end do
-
     coeff = coeff*this%coefficient
   end function coeff
 
-  !!<summary>Sums all the possible combinations of relevant sequences based of the variable sequence
-  !!lists specified.</summary>
-  !!<parameter name="mnseq">a list of possible variable sequences in each 
-  !!multinomial (one for each multinomial) that might contribute to the correct target variable.</parameter>
+  !!<summary>Sums all the possible combinations of relevant sequences
+  !!based of the variable sequence lists specified.</summary>
+  !!<parameter name="mnseq">a list of possible variable sequences in
+  !!each multinomial (one for each multinomial) that might contribute
+  !!to the correct target variable.</parameter>
   integer(lint) function sum_sequence(this, mnseq)
     class(Product), intent(in) :: this
     class(vararray2d), intent(in) :: mnseq(size(this%multinoms,1))
 
-    !!<local name="passin">Array of sequence sets (one for each multinomial) that will have their
-    !!cartesian product taken.</local>
+    !!<local name="passin">Array of sequence sets (one for each
+    !!multinomial) that will have their cartesian product
+    !!taken.</local>
     class(vararray), allocatable :: passin(:)
     
     integer :: i, j, z
-    !!<local name="seqprod">Temporary variable for computing the product over adjacent term coefficients.</local>
-    !!<local name="allseqs">Cartesian product of the possible sequences from each multinomial in the product.</local>
-    !!<local name="seqlj">Re-constructed S_lj for a single result in 'allseqs' using the sequences 
-    !!from 'mnseq'.</local>
-    !!<local name="expsum">Temporary sum of the exponents across all adjacent sequences in the product 
-    !!(per variable).</local>
-    !!<local name="irange">Temporary range from 1..len(mnesq) for constructing the cartesian product.</local>
+    !!<local name="seqprod">Temporary variable for computing the
+    !!product over adjacent term coefficients.</local>
+    !!<local name="allseqs">Cartesian product of the possible
+    !!sequences from each multinomial in the product.</local>
+    !!<local name="seqlj">Re-constructed S_lj for a single result in
+    !!'allseqs' using the sequences from 'mnseq'.</local>
+    !!<local name="expsum">Temporary sum of the exponents across all
+    !!adjacent sequences in the product (per variable).</local>
+    !!<local name="irange">Temporary range from 1..len(mnesq) for
+    !!constructing the cartesian product.</local>
     integer(lint) :: seqprod
     integer, allocatable :: allseqs(:,:)
     integer :: seqlj(size(this%multinoms, 1), size(this%targets, 1)), expsum(size(this%targets, 1))
@@ -350,8 +431,10 @@ contains
 
     sum_sequence = 0
     allocate(passin(size(mnseq,1)))
-    !We could speed this up by keeping the ranges between loop iterations; if a two of the mnsequences have
-    !the same number of elements, we could re-use the range. For now its not worth the extra complexity.
+    !We could speed this up by keeping the ranges between loop
+    !iterations; if a two of the mnsequences have the same number of
+    !elements, we could re-use the range. For now its not worth the
+    !extra complexity.
     do i=1, size(this%multinoms,1)
        allocate(irange(mnseq(i)%length))
        irange = (/( j, j=1, mnseq(i)%length, 1 )/)
@@ -360,16 +443,16 @@ contains
     end do
 
     call cproduct(passin, allseqs)
-    !Each row in allseqs now has a list of integer *indices* from mnseq that need to be used for the
-    !coefficient calculations.
+    !Each row in allseqs now has a list of integer *indices* from
+    !mnseq that need to be used for the coefficient calculations.
     do i = 1, size(allseqs, 1)
-       !First we loop over the multinomials and extract the sequence corresponding to the index determined
-       !by allseqs.
+       !First we loop over the multinomials and extract the sequence
+       !corresponding to the index determined by allseqs.
        do j = 1, size(this%multinoms, 1)
           seqlj(j,:) = mnseq(j)%items(allseqs(i,j),:)
        end do
-       !Now that we have the sequences, we sum them up one variable at a time to make sure that they produce the
-       !correct target term.
+       !Now that we have the sequences, we sum them up one variable at
+       !a time to make sure that they produce the correct target term.
        do j=1, size(this%targets, 1)
           expsum(j) = sum(seqlj(:,j))
        end do
@@ -384,14 +467,23 @@ contains
   end function sum_sequence
 
   !!<summary>Sets up the multinomial.</summary>
-  !!<parameter name="power">The value of r for the r-cycle. Also the power on each of the variables
-  !!in the multinomial.</parameter>
-  !!<parameter name="exponent">The exponent that the entire multinomial is raised to.</parameter>
-  subroutine multinomial_initialize(this, power, exponent)
+  !!<parameter name="power">The value of r for the r-cycle. Also the
+  !!power on each of the variables in the multinomial.</parameter>
+  !!<parameter name="exponent">The exponent that the entire
+  !!multinomial is raised to.</parameter>
+  !!<parameter name="coeff" regular="true">The coefficient on the
+  !!arrowed variable.</parameter>
+  !!<parameter name="arrowings" regular="true">An array that indicates
+  !!which elements have arrows an them.</parameter>
+  subroutine multinomial_initialize(this, power, exponent, coeff, arrowings)
     class(Multinomial) :: this
-    integer, intent(in) :: exponent, power
+    integer, intent(in) :: exponent, power, coeff
     integer :: j
+    logical, intent(in) :: arrowings(:)
 
+    this%coeff = coeff
+    if (.not. allocated(this%arrowings)) allocate(this%arrowings(size(arrowings)))
+    this%arrowings = arrowings
     if (.not. allocated(this%power)) allocate(this%power)
     this%power = power
     this%exponent = exponent
@@ -402,32 +494,45 @@ contains
 
   !!<summary>Returns the number of different ways to partition an n-element
   !!set into disjoint subsets of sizes k1, ..., km.</summary>
-  !!<parameter name="sequencei">an un-normed tuple of form (k1, k2, k3).</parameter>
+  !!<parameter name="sequencei">an un-normed tuple of form (k1, k2,
+  !!k3)."</parameter>
   integer(lint) function nchoosekm(this, sequencei)
     class(Multinomial), intent(in) :: this
     integer, intent(in) :: sequencei(:)
-    integer :: j
+    integer :: j, i
     integer :: nsum
     integer :: normseq(size(sequencei,1))
+    integer :: pcoeff
 
     if (.not. all(mod(sequencei, this%power) == 0)) then
        nchoosekm = 0
+       pcoeff = 1
     else
        normseq = sequencei/this%power
        nchoosekm = 1
        do j = 1, size(sequencei,1)
           nsum = sum(normseq(1:j))
           nchoosekm = nchoosekm*nchoosek(nsum, normseq(j))
+          !!<comments>Now add the the effects of the contribution from
+          !!the coefficients of the variable "inside" the
+          !!multinomial.</comments>
+          pcoeff = 1
+          do i = 1, size(this%arrowings)
+             if (this%arrowings(i)) then
+                pcoeff = pcoeff * this%coeff**normseq(i)
+             end if
+          end do
        end do
     end if
+    nchoosekm = nchoosekm * pcoeff
   end function nchoosekm
 
-  !!<summary>This implementation was taken from "Binomial Coefﬁcient Computation: Recursion 
-  !!or Iteration?" by Yannis Manolopoulos, ACM SIGCSE Bulletin InRoads, Vol.34, No.4, 
-  !!December 2002. http://delab.csd.auth.gr/papers/SBI02m.pdf It is supposed to be robust 
-  !!against large, intermediate values and to have optimal complexity.</summary>
-  !!<parameter name="n" regular="true"></parameter>
-  !!<parameter name="k" regular="true"></parameter>
+  !!<summary>This implementation was taken from "Binomial Coefﬁcient
+  !!Computation: Recursion or Iteration?" by Yannis Manolopoulos, ACM
+  !!SIGCSE Bulletin InRoads, Vol.34, No.4, December
+  !!2002. http://delab.csd.auth.gr/papers/SBI02m.pdf It is supposed to
+  !!be robust against large, intermediate values and to have optimal
+  !!complexity.</summary>
   function nchoosek(n,k)
     integer(lint) :: nchoosek
     integer, intent(in) :: n, k
@@ -457,54 +562,95 @@ contains
     nchoosek = t
   end function nchoosek
 
-  !!<summary>Uses a group and concentrations to find the number of unique arrangements as 
-  !!described by polya.</summary>
-  !!<parameter name="concentrations" regular="true">A list of integers specifying how many of 
-  !!each coloring should be present in each of the enumerated lists.</parameter>
-  !!<parameter name="group" regular="true">Group operations for permuting the colorings. Rows are operations,
-  !!columns are the integer permutations describing the operation.</parameter>
-  !!<parameter name="polynomials">A list of integers where the index is the power on the 
-  !!variables in the multinomial and the value is the degeneracy of that multinomial in 
-  !!the group operation.</parameter>
-  !!<parameter name="decompose" regular="true">Specifies whether the r-cycle structure of the
-  !!polynomials array should be found explicitly.</parameter>
-  integer(lint) function polya(concentrations, group, polynomials, decompose)
+  !!<summary>Uses a group and concentrations to find the number of
+  !!unique arrangements as described by polya.</summary>
+  !!<parameter name="concentrations" regular="true">A list of integers
+  !!specifying how many of each coloring should be present in each of
+  !!the enumerated lists.</parameter>
+  !!<parameter name="group" regular="true">Group operations for
+  !!permuting the colorings. Rows are operations, columns are the
+  !!integer permutations describing the operation.</parameter>
+  !!<parameter name="polynomials">A list of integers where the index
+  !!is the power on the variables in the multinomial and the value is
+  !!the degeneracy of that multinomial in the group
+  !!operation.</parameter>
+  !!<parameter name="decompose" regular="true">Specifies whether the
+  !!r-cycle structure of the polynomials array should be found
+  !!explicitly.</parameter>
+  !!<parameter name="arrows" regular="true">The number of types of
+  !!elements that have arrows on them.</parameter>
+  !!<parameter name="agroup" regular="true">The group operations for
+  !!the arrow permutations.</parameter>
+  integer(lint) function polya(concentrations, group, agroup, arrows, polynomials, decompose)
     integer, allocatable, intent(in) :: concentrations(:)
-    integer, pointer, intent(in) :: group(:,:)
-    integer, optional, intent(inout) :: polynomials(size(group,1), size(group,2))
+    ! integer, intent(in) :: group(:,:)
+    integer, intent(in) :: group(:,:)
+    integer, optional, intent(inout) :: polynomials(size(group,1),size(group,2),2)
     logical, optional :: decompose
+    integer, optional, intent(in) :: agroup(:,:)
+    integer, optional, intent(in) :: arrows
 
-    !!<local name="polyndict">A dictionary of the unique products of multinomials in the polya calculation.</local>
-    !!<local name="mult">A mx2 array of the powers and degeneracies of each multinomial in a product.</local>
-    !!<local name="operation">Temporary variable for holding a single group operation.</local>
-    !!<local name="visited">Temporary array for keeping track of which operation elements have already been
-    !!visited when trying to determine the r-cycle structure of the group operation.</local>
+    !!<local name="polyndict">A dictionary of the unique products of
+    !!multinomials in the polya calculation.</local>
+    !!<local name="mult">A mx2 array of the powers and degeneracies of
+    !!each multinomial in a product.</local>
+    !!<local name="operation">Temporary variable for holding a single
+    !!group operation.</local>
+    !!<local name="arrow_operation">Temporary variable for holding a single
+    !!arrow permutation.</local>
+    !!<local name="visitedp,visitedc">Temporary array for keeping
+    !!track of which operation elements have already been visited when
+    !!trying to determine the r-cycle structure of the group
+    !!operation.</local>
     class(Product), allocatable :: polyndict(:)
-    integer, allocatable :: mult(:,:)
-    integer :: operation(size(group,2)), visited(size(group,2))
-    !!<local name="cursor">Points to the current element in the group operation that is being visited.</local>
-    !!<local name="vindex">Temporary, used to find the location of the next operation to process when finding
-    !!the r-cycles.</local>
+    integer, allocatable :: mult(:,:), visitedc(:), arrow_cycle_len(:), arrow_operation(:)
+    integer :: operation(size(group,2))
+    integer :: visitedp(size(group,2))
+    ! integer :: visitedp(size(group,2)), visitedc(size(group,2))
+    !!<local name="cursor">Points to the current element in the group
+    !!operation that is being visited.</local>
+    !!<local name="vindex">Temporary, used to find the location of the
+    !!next operation to process when finding the r-cycles.</local>
     !!<local name="powers">Temporary, the value r for the r-cycle.</local>
     !!<local name="m">The number of unique multinomials in the product.</local>
-    !!<local name="mindex">The index of the degeneracy for the lowest valued r-cycle left in the polynomials
-    !!array. Corresponds to the value r.</local>
-    !!<local name="dupindex">The index of the Product instance in polyndict that has the same multinomial set
-    !!as the one for the current group operation.</local>
-    !!<parameter name="pused">The number of unique Product instances created so far.</parameter>
-    integer :: cursor(1), vindex(1), powers
-    integer :: i, j, m, mindex, dupindex, pused = 0
-    logical :: ldecomp
-
+    !!<local name="mindex">The index of the degeneracy for the lowest
+    !!valued r-cycle left in the polynomials array. Corresponds to the
+    !!value r.</local>
+    !!<local name="dupindex">The index of the Product instance in
+    !!polyndict that has the same multinomial set as the one for the
+    !!current group operation.</local>
+    !!<parameter name="pused">The number of unique Product instances
+    !!created so far.</parameter>
+    !!<local name="arrow_cycle_len">An integer array that stores the
+    !!length of the arrows cyles.</local>
+    !!<local name="cyc_len">An integer for th current arrow
+    !!cycle.</local>
+    !!<local name="arrowings">A logical array indicating the arrows
+    !!locations in the concentration array.</local>
+    !!<local name="coef">The coefficient to the variables do to the
+    !!presence of arrows.</local>
+    integer :: cursor(1), vindex(1), powers, coef
+    integer :: i, j, m, mindex, dupindex, pused = 0, k
+    logical :: ldecomp, arrowings(size(concentrations,1))
+    integer :: cyc_len
     pused = 0
-    !This checks that the specified concentration matches the number of sites the group is 
-    !acting on.
+
+    ! This checks that the specified concentration matches the number
+    ! of sites the group is acting on.
     if (sum(concentrations) .ne. size(group,2)) then
        stop "Error, the concentrations don't add up to the number of sites being used!"
     end if
 
-    !These checks allow a pre-compiled r-cycle structure for the group to be passed in
-    !as the form of the polynomials array.
+    arrowings = .false.
+
+    if (present(arrows)) then
+       do i = (size(arrowings)-arrows+1), size(arrowings)
+          arrowings(i) = .true. 
+       end do
+       allocate(visitedc(size(agroup,2)),arrow_cycle_len(size(agroup,2)),arrow_operation(size(agroup,2)))
+    end if
+    !These checks allow a pre-compiled r-cycle structure for the group
+    !to be passed in as the form of the polynomials array.
     if (.not. present(polynomials)) then
        polynomials = 0
        ldecomp = .true.
@@ -518,43 +664,79 @@ contains
     end if
 
     allocate(polyndict(size(group,1)))
+
     do i=1, size(group,1)
        if (.not. present(polynomials) .or. ldecomp) then
           operation = group(i,:)
-          visited = 0
-          do while(any(visited == 0))
-             cursor = minloc(visited)
-             vindex = minloc(visited)
+          visitedp = 0          
+          j = 1
+
+          if (present(arrows)) then
+             arrow_operation = agroup(i,:)
+             visitedc = 0
+             arrow_cycle_len = 0
+             do while(any(visitedc == 0))
+                cyc_len = 1
+                cursor = minloc(visitedc)
+                vindex = minloc(visitedc)
+                visitedc(cursor(1)) = 1
+                cursor = arrow_operation(cursor(1))
+                do while(cursor(1) /= vindex(1))
+                   visitedc(cursor(1)) = 1
+                   cyc_len = cyc_len + 1
+                   cursor = arrow_operation(cursor(1))
+                end do
+                arrow_cycle_len(j) = cyc_len
+                j = j + 1
+             end do
+          end if
+
+          do while(any(visitedp == 0))
+             cursor = minloc(visitedp)
+             vindex = minloc(visitedp)
              powers = 1
-             visited(cursor(1)) = 1
+             visitedp(cursor(1)) = 1
              cursor = operation(cursor(1))
              do while(cursor(1) /= vindex(1))
-                visited(cursor(1)) = 1
+                visitedp(cursor(1)) = 1
                 powers = powers + 1
                 cursor = operation(cursor(1))
              end do
-             
-             polynomials(i,powers) = polynomials(i,powers) + 1          
+             coef = 0
+             if (present(arrows)) then
+                do k = 1, size(arrow_cycle_len)
+                   if (arrow_cycle_len(k) /= 0) then
+                      if (mod(powers,arrow_cycle_len(k)) == 0) then
+                         coef = coef + arrow_cycle_len(k)
+                      end if
+                   end if
+                end do
+             end if
+             polynomials(i,powers,1) = polynomials(i,powers,1) + 1
+             polynomials(i,powers,2) = coef
           end do
        end if
 
-       !We now know the powers and degeneracies of all the r-cycles in the group operation.
-       !Create the 2D multinomial array that defines r,d for each M_j^r.
-       m = count(polynomials(i,:) .gt. 0)
-       allocate(mult(m,2))
+       !We now know the powers and degeneracies of all the r-cycles in
+       !the group operation.  Create the 2D multinomial array that
+       !defines r,d for each M_j^r.
+       m = count(polynomials(i,:,1) .gt. 0)
+       allocate(mult(m,3))
        mindex = 1
        do j=1, size(polynomials, 2)
-          if (polynomials(i,j) .gt. 0) then
+          if (polynomials(i,j,1) .gt. 0) then
              mult(mindex,1) = j
-             mult(mindex,2) = polynomials(i,j)
+             mult(mindex,2) = polynomials(i,j,1)
+             mult(mindex,3) = polynomials(i,j,2)
              mindex = mindex + 1
           end if
        end do
-
-       !Find out if any of the existing products has this multinomial set already.
+       
+       !Find out if any of the existing products has this multinomial
+       !set already.
        dupindex = 0
        do j=1, pused
-          if (all(shape(polyndict(j)%multinom_rd) .eq. shape(mult))) then
+          if (all(shape(polyndict(j)%multinom_rd) .eq. shape(mult)) .and. allocated(polyndict(j)%multinom_rd)) then
              if (all(polyndict(j)%multinom_rd .eq. mult)) then
                 polyndict(j)%coefficient = polyndict(j)%coefficient + 1
                 dupindex = j
@@ -563,9 +745,10 @@ contains
        end do
 
        if (dupindex == 0) then
-          !We found no duplicate product in the set already, just initialize the next empty slot
+          !We found no duplicate product in the set already, just
+          !initialize the next empty slot
           pused = pused + 1
-          call polyndict(pused)%initialize(1, concentrations, mult)
+          call polyndict(pused)%initialize(1, concentrations, mult, arrowings)
        end if
        if (allocated(mult)) then 
           deallocate(mult)
@@ -574,8 +757,13 @@ contains
 
     polya = 0
     do i = 1, pused
-      polya = polyndict(i)%coeff() + polya
-    end do    
+       polya = polyndict(i)%coeff() + polya
+    end do
     polya = polya/size(group,1)
+
+    if (present(arrows)) then
+       deallocate(visitedc,arrow_cycle_len,arrow_operation)
+    end if
+    deallocate(polyndict)
   end function polya
 end MODULE classes

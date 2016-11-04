@@ -55,12 +55,12 @@ OBJS = ${SRC:.f90=.o}
 
 all: libpolya.a 
 
-libpolya.a: itertools.o classes.o 
+libpolya.a: itertools.o classes.o
 	ar ru $@ $?
 	ranlib  $@
 
-libpolya.so:  itertools.o classes.o 
-	ifort -dynamiclib -fpic -o libpolya.so itertools.f90 classes.f90
+libpolya.so:  itertools.o classes.o
+		ifort -dynamiclib -fpic -o libpolya.so itertools.f90 classes.f90
 #	ar ru $@ $?
 #	ranlib  $@
 
