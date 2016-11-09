@@ -9,6 +9,24 @@
 	<output identifier="result.out" folder="./tests" file="result.out.{}" 
 		template="integer.xml" />
 	<target name="[default]" compareto="result.out" varfile="polya.out" when="each" />
+	<global name="arrows" ignore="true"/>
+	<global name="agroup" ignore="true"/>
+      </test>
+      <test identifier="burnside" description="Same tests used for the
+    					       python unit tests."
+    	    timed="true" cases="a[0-5]">
+    	<output identifier="results.out" folder="./tests" file="results.out.{}"
+    		template="integer.xml" />
+    	<target name="[default]" compareto="results.out" varfile="polya.out" when="each" />
+	<assignment name="arrows" value="arrowings">
+    	  <value identifier="arrowings" folder="./tests"
+    		 file="arrows.in.{}" rename="arrows.in" />
+	</assignment>
+	<assignment name="agroup" value="a_group_ops" >
+    	  <value identifier="a_group_ops" folder="./tests"
+    		 file="a_group.out.{}" rename="a_group.in" />
+	</assignment>
+	<assignment name="agroup" constant="agroup+1" />
       </test>
       <global name="polynomials" type="integer"
 	      modifiers="allocatable" dimensions=":,:,:" />
@@ -25,45 +43,6 @@
       <assignment name="concentrations" value="concs"> 
 	<value identifier="concs" folder="./tests"
 	       file="concs.in.{}" rename="concs.in" />
-      </assignment>
-      <global name="arrows" ignore="true"/>
-      <global name="agroup" ignore="true"/>
-    </group>
-  </decorates>
-  
-  <decorates name="classes.polya">
-    <group name="arrow_coefficient_tests" purpose="testing">
-      <test identifier="burnside" description="Same tests used for the
-    					       python unit tests."
-    	    timed="true" cases="a[0-5]">
-    	<output identifier="results.out" folder="./tests" file="results.out.{}"
-    		template="integer.xml" />
-    	<target name="[default]" compareto="results.out" varfile="polya.out" when="each" />
-      </test>
-      <global name="polynomials" type="integer"
-    	      modifiers="allocatable" dimensions=":,:,:" />
-      <assignment name="group" value="group_ops" allocate="true">
-    	<value identifier="group_ops" folder="./tests"
-    	       file="group.out.{}" rename="group.in" />
-      </assignment>
-      <assignment name="group" constant="group+1" />
-      <assignment name="agroup" value="a_group_ops" allocate="true">
-    	<value identifier="a_group_ops" folder="./tests"
-    	       file="a_group.out.{}" rename="a_group.in" />
-      </assignment>
-      <assignment name="agroup" constant="agroup+1" />
-      <assignment name="polynomials"
-    		  allocate="size(group, 1), size(group,2), 2" />
-      <assignment name="decompose" value="const">
-    	<value identifier="const" constant=".true." />
-      </assignment>
-      <assignment name="concentrations" value="concs">
-    	<value identifier="concs" folder="./tests"
-    	       file="concs.in.{}" rename="concs.in" />
-      </assignment>
-      <assignment name="arrows" value="arrowings">
-    	<value identifier="arrowings" folder="./tests"
-    	       file="arrows.in.{}" rename="arrows.in" />
       </assignment>
     </group>
   </decorates>

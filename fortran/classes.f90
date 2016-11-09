@@ -583,7 +583,6 @@ contains
   !!the arrow permutations.</parameter>
   integer(lint) function polya(concentrations, group, agroup, arrows, polynomials, decompose)
     integer, allocatable, intent(in) :: concentrations(:)
-    ! integer, intent(in) :: group(:,:)
     integer, intent(in) :: group(:,:)
     integer, optional, intent(inout) :: polynomials(size(group,1),size(group,2),2)
     logical, optional :: decompose
