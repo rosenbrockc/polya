@@ -8,6 +8,7 @@ of multinomials. Construct a product class by specifying the exponent and target
 and then add multinomials using the Product instance's append(). The coefficient is
 then available from the coeff().
 """
+from functools import reduce
 class Sequence(object):
     """Represents an exponent-limited sequence with a single root. Here, sequence represents a
     sequence of integer values k_1, k_2...k_j that are the exponents of a single term in a multinomial.
@@ -54,7 +55,7 @@ class Sequence(object):
         self.varcount = len(targets)
 
     @property
-    def kidcount(self):
+    def kidcount(self): #pragma: no cover
         """Returns the number of children and grandchildren to the last generation."""
         if self._kidcount is None:
             _kidcount = sum([k.kidcount for k in self.kids])
@@ -76,12 +77,12 @@ class Sequence(object):
         if len(self.kids) == 0:
             if depth == self.varcount-1:
                 return [(self._root,)]
-            else:
+            else: #pragma: no cover
                 return [(self._root,) + (0,)*(self.varcount-(depth+1))]
         else:
             return sequences
 
-    def expand_noappend(self, sequences, start, varindex):
+    def expand_noappend(self, sequences, start, varindex): #pragma: no cover
         """Implements an expansion that doesn't use python's append."""
         if len(sequences) == 0:
             if self.kidcount == 0:
@@ -135,8 +136,8 @@ class Product(object):
         #We start with the first variable and choose only those combinations of exponents
         #across *all* the multinomials that give the correct target exponent for that variable.
         possibles = [n.possible_powers for n in self.multinoms]
+        
         seq0 = [s for s in product(*possibles) if sum(s) == self.targets[0]]
-
         #Next, we construct Sequence instances for each of the first variable compatible
         #possibilities and follow them through to the other variables.
         coeffs = 0
@@ -237,7 +238,7 @@ class Multinomial(object):
             for iseq, arrow in enumerate(self.arrowings):
                 if arrow:
                     pcoeff *= self.coeff**normseq[iseq]
-                
+
             return prod*pcoeff
         
     @staticmethod
@@ -247,7 +248,7 @@ class Multinomial(object):
         December 2002. http://delab.csd.auth.gr/papers/SBI02m.pdf It is supposed to be robust 
         against large, intermediate values and to have optimal complexity.
         """
-        if k < 0 or k > n:
+        if k < 0 or k > n: #pragma: no cover
             return 0
         if k==0 and n == 0:
             return 1
@@ -261,7 +262,7 @@ class Multinomial(object):
 
         return t
 
-def group(gen):
+def group(gen): #pragma: no cover
     """Generates an entire group using the specified generators by applying generators
     to each other recursively.
 
@@ -279,7 +280,7 @@ def group(gen):
 
     #Make sure the group is zero-based for python.
     if not 0 in gen[0]:
-        ngens = [list(map(lambda e: e-1, g)) for g in gen]
+        ngens = [list([e-1 for e in g]) for g in gen]
     else:
         ngens = gen
 
@@ -308,10 +309,10 @@ def _group_to_cyclic(group, limit=None):
     """Determines the degeneracy of each r-cycle in the specified group operations."""
     result = []
     #We allow filtering so that the unit testing can access the cyclic form of the group.
-    if 0 not in group[0][0]:
+    if 0 not in group[0][0]: #pragma: no cover
         group = [[[j - 1 for j in i] for i in t] for t in group]
     
-    if limit is not None:
+    if limit is not None: #pragma: no cover
         filtered = group[limit[0]:limit[1]]
     else:
         filtered = group
@@ -326,7 +327,7 @@ def _group_to_cyclic(group, limit=None):
         visitedp = [0]*len(operation[0])
         visitedc = [0]*len(operation[1])
         polynomials = {}
-
+        
         arrow_cycle_len = []
         #We start by finding the cylce lengths of the arrow group
         #operations so that we can later see how many of them are
@@ -371,18 +372,16 @@ def _group_to_cyclic(group, limit=None):
             #the arrow cycles are divisors in length of the current
             #cycle.
             coef = sum([l for l in arrow_cycle_len if powers%l == 0])
-
             polykey = (powers, coef)
             if polykey not in polynomials:
                 polynomials[polykey] = 1
             else:
                 polynomials[polykey] += 1
-
         result.append(polynomials)
         
     return result
 
-def polya(concentrations, group, arrowings, debug=False):
+def polya(concentrations, group, arrowings=None, debug=False):
     """Uses a group and concentrations to find the number of unique arrangements as described by 
     polya.
     
@@ -390,20 +389,23 @@ def polya(concentrations, group, arrowings, debug=False):
       be present in each of the enumerated lists.
     :arg group: group operations for permuting the colorings.
     """
-    if isinstance(arrowings, int):
+
+    if arrowings is None:
+        arrowings = [False]*len(concentrations)
+    elif isinstance(arrowings, int):
         arrowings = [False]*(len(concentrations)-arrowings) + [True]*arrowings
-    
+        
     #This is to check that the concentrations sum to the number of sites the group is
     #operating on
+    
     if sum(concentrations) != len(group[0][0]):
-        print("The concentrations don't sum to the number of things the group is acting on!")
-        exit()
-
+        raise ValueError("The concentrations don't sum to the number of things the group is acting on!")
+            
     for k in range(2):
         for g in range(len(group)):
-            if 0 not in group[0][k]:
+            if 0 not in group[g][k]:
                 group[g][k] = [j-1 for j in group[g][k]]
-        
+
     polyndict = {}
     #The operations in the group are used to construct the unique polynomials for each operation.
     for polynomials in _group_to_cyclic(group):
@@ -418,11 +420,15 @@ def polya(concentrations, group, arrowings, debug=False):
         else:
             polyndict[key].coefficient += 1
 
-    if debug:
+    if debug: #pragma: no cover
         for key in polyndict:
-            print(str(polyndict[key]), " => ", polyndict[key].coeff())
-
-    rad = sum([p.coeff() for p in polyndict.values()])
+            print((str(polyndict[key]), " => ", polyndict[key].coeff()))
+            
+    pp = 0
+    for p in list(polyndict.values()):
+        pp += p.coeff()
+        
+    rad = sum([p.coeff() for p in list(polyndict.values())])
     return int(rad/float(len(group)))             
 
 def _examples():
@@ -463,7 +469,7 @@ def _parser_options():
                               "the symmetry group defining uniqueness on the lattice."))
     parser.add_argument("-group",
                         help=("Specify the name/path to a file listing the *entire* set of group "
-                              "symmetry operations defining uniqueness on the lattice."))
+                              "symmetry and arrow permutation operations defining uniqueness on the lattice."))
     parser.add_argument("-parse", choices=["python", "text"], default="text",
                         help=("Choose how the group files will be interpreted by the script:\n"
                               "- 'python': the text is assumed to be a valid python expression, \n"
@@ -477,6 +483,8 @@ def _parser_options():
                         help="Print verbose polya polynomial information for debugging.")
     parser.add_argument("-examples", action="store_true",
                         help="Print some examples for how to use the Polya solver.")
+    parser.add_argument("-arrows", type=int, default=None
+                        help="The numer of elements with 'arrows' on them in the system.")
 
     vardict = vars(parser.parse_args())
     if vardict["examples"]:
@@ -510,9 +518,13 @@ def script_polya(args):
     elif args["group"]:
         grpops = _read_file(args, args["group"])
 
-    coeff = polya(args["concentrations"], grpops, args["debug"])
+    if args["arrows"]:
+        coeff = polya(args["concentrations"], grpops, arrowings=args["arrows"], args["debug"])
+    else:
+        coeff = polya(args["concentrations"], grpops, args["debug"])
+    
     print(coeff)
     return coeff
 
-# if __name__ == '__main__':
-#     script_polya(_parser_options())
+if __name__ == '__main__':
+    script_polya(_parser_options())
